@@ -2,7 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { useAuthStore } from "@/features/auth/store/auth.store";
-import { AuthGuard } from "@/features/auth/components/auth-guard";
+import { AuthGuard } from "@/features/auth/components/shared/auth-guard";
 
 export default function DashboardLayout({
   children,

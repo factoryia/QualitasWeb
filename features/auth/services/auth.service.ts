@@ -1,4 +1,4 @@
-import { api } from "@/lib/axios";
+import { api } from "@/services/axios";
 import { LoginRequest, LoginResponse } from "../types";
 
 export const authService = {
