@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useAuthStore } from "@/features/auth/store/auth.store";
 import { AuthGuard } from "@/features/auth/components/shared/auth-guard";
@@ -11,6 +12,19 @@ export default function DashboardLayout({
 }) {
   const { user, logout } = useAuthStore();
   const router = useRouter();
+  const [isMounted, setIsMounted] = useState(false);
+
+  const handleNavigation = (path: string) => {
+    router.push(path);
+  };
+
+  useEffect(() => {
+    setIsMounted(true);
+  }, []);
+
+  if (!isMounted) {
+    return <div className="min-h-screen bg-slate-100" />;
+  }
 
   return (
     <AuthGuard>
@@ -20,14 +34,22 @@ export default function DashboardLayout({
           <div className="p-4 border-b">
             <h1 className="text-xl font-bold text-slate-800">Qualitas Nexus</h1>
             <p className="text-xs text-slate-500 mt-1">
-              Tenant: <span className="font-medium text-blue-600">{user?.tenant}</span>
+              Tenant: <span className="font-medium text-blue-600">{user?.tenant || 'root'}</span>
             </p>
           </div>
           <nav className="p-4 space-y-2">
-            {/* Links de navegación */}
-            <div className="text-sm font-medium text-slate-600">Dashboard</div>
-            <div className="text-sm font-medium text-slate-600">Usuarios</div>
-            <div className="text-sm font-medium text-slate-600">Configuración</div>
+            <button
+              onClick={() => handleNavigation("/dashboard")}
+              className="block w-full text-left text-sm font-medium text-slate-700 hover:text-blue-600 hover:bg-blue-50 p-2 rounded transition"
+            >
+              📊 Dashboard
+            </button>
+            <button
+              onClick={() => handleNavigation("/dashboard/demo-permissions")}
+              className="block w-full text-left text-sm text-slate-600 hover:text-blue-600 hover:bg-blue-50 p-2 rounded transition"
+            >
+              🔐 Permissions Demo
+            </button>
           </nav>
         </aside>
 
@@ -39,7 +61,7 @@ export default function DashboardLayout({
             </h2>
             <div className="flex items-center gap-4">
               <span className="text-sm text-slate-600">{user?.email}</span>
-              <button 
+              <button
                 onClick={() => {
                   logout();
                   router.push("/login");
