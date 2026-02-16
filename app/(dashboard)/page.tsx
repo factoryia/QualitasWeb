@@ -10,7 +10,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Users, Shield, UsersRound } from "lucide-react";
+import { Users } from "lucide-react";
 
 export default function DashboardPage() {
   const user = useAuthStore((s) => s.user);
@@ -18,21 +18,9 @@ export default function DashboardPage() {
   const quickLinks = [
     {
       title: "Usuarios",
-      description: "Gestionar usuarios del tenant",
+      description: "Gestionar usuarios, roles y grupos",
       href: "/usuarios",
       icon: Users,
-    },
-    {
-      title: "Roles",
-      description: "Roles y permisos",
-      href: "/roles",
-      icon: Shield,
-    },
-    {
-      title: "Grupos",
-      description: "Grupos y miembros",
-      href: "/grupos",
-      icon: UsersRound,
     },
   ];
 
@@ -83,7 +71,7 @@ export default function DashboardPage() {
         <CardHeader>
           <CardTitle className="text-base">Resumen</CardTitle>
           <CardDescription>
-            Accede a Usuarios, Roles y Grupos desde el menú lateral o las tarjetas de arriba.
+            Accede a la gestión de Usuarios, Roles y Grupos desde el menú lateral o la tarjeta de arriba.
           </CardDescription>
         </CardHeader>
       </Card>

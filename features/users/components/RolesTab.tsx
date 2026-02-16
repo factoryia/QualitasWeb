@@ -13,7 +13,7 @@ import { TableSkeleton } from "@/components/ui/table-skeleton";
 import { ConfirmModal } from "@/components/shared/confirm-modal";
 import { Pencil, Trash2, Plus } from "lucide-react";
 
-export default function RolesPage() {
+export function RolesTab() {
   const accessToken = useAuthStore((s) => s.accessToken);
   const tenant = useAuthStore((s) => s.user?.tenant ?? "root");
   const auth = accessToken ? { accessToken, tenant } : undefined;
@@ -114,13 +114,7 @@ export default function RolesPage() {
 
   return (
     <div>
-      <p className="text-sm font-medium uppercase tracking-wider text-slate-500 dark:text-slate-400">
-        Administración
-      </p>
-      <div className="mt-1 flex items-center justify-between gap-4">
-        <h1 className="text-2xl font-bold text-slate-900 dark:text-slate-100">
-          Gestión de Roles
-        </h1>
+      <div className="mb-4 flex items-center justify-end gap-4">
         <Button
           type="button"
           onClick={() => {
@@ -219,7 +213,7 @@ export default function RolesPage() {
         onCancel={() => setDeleteTarget(null)}
       />
 
-      <div className="mt-6 overflow-hidden rounded-lg border border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-900">
+      <div className="overflow-hidden rounded-lg border border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-900">
         {loading ? (
           <div className="p-4">
             <TableSkeleton rows={8} cols={3} />

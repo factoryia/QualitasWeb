@@ -217,4 +217,27 @@ export const usersService = {
       { ...(authHeaders(auth) && { headers: authHeaders(auth) }) }
     );
   },
+
+  /**
+   * Obtener perfil del usuario autenticado
+   * GET /api/v1/identity/profile
+   */
+  getProfile: async (auth?: AuthHeaders): Promise<UserDto> => {
+    const { data } = await api.get<UserDto>("/api/v1/identity/profile", {
+      ...(authHeaders(auth) && { headers: authHeaders(auth) }),
+    });
+    return data!;
+  },
+
+  /**
+   * Actualizar perfil del usuario autenticado
+   * PUT /api/v1/identity/profile
+   */
+  updateProfile: async (userData: UpdateUserRequest, auth?: AuthHeaders): Promise<void> => {
+    await api.put(
+      "/api/v1/identity/profile",
+      userData,
+      { ...(authHeaders(auth) && { headers: authHeaders(auth) }) }
+    );
+  },
 };
