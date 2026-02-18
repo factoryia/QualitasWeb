@@ -69,6 +69,12 @@ jobs:
           tenant-id: ${{ secrets.AZUREAPPSERVICE_TENANTID_5DF05B9BEC0E4C228E49F5CE8CD7BCD5 }}
           subscription-id: ${{ secrets.AZUREAPPSERVICE_SUBSCRIPTIONID_614F782E88D648FBBAE6E633F2B609D2 }}
 
+      - name: Disable Oryx build on App Service
+        run: |
+          APP_ID=$(az webapp list --query "[?name=='qualitas'].id" -o tsv)
+          az webapp config appsettings set --ids "$APP_ID" \
+            --settings SCM_DO_BUILD_DURING_DEPLOYMENT=false
+
       - name: 'Deploy to Azure Web App'
         id: deploy-to-webapp
         uses: azure/webapps-deploy@v3
