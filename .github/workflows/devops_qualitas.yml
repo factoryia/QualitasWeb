@@ -23,31 +23,17 @@ jobs:
         with:
           node-version: '22.x'
 
-      - name: Install pnpm
-        uses: pnpm/action-setup@v4
-        with:
-          version: latest
-
-      - name: Install dependencies and build
+      - name: npm install, build, and test
         run: |
-          pnpm install --frozen-lockfile
-          pnpm run build
-
-      - name: Copy static assets into standalone output
-        run: |
-          cp -r .next/static .next/standalone/.next/static
-          cp -r public .next/standalone/public
-
-      - name: Zip standalone output
-        run: |
-          cd .next/standalone
-          zip -r ../../standalone.zip .
+          npm install
+          npm run build --if-present
+          npm run test --if-present
 
       - name: Upload artifact for deployment job
         uses: actions/upload-artifact@v4
         with:
           name: node-app
-          path: standalone.zip
+          path: .
 
   deploy:
     runs-on: ubuntu-latest
@@ -61,7 +47,7 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           name: node-app
-
+      
       - name: Login to Azure
         uses: azure/login@v2
         with:
@@ -69,17 +55,11 @@ jobs:
           tenant-id: ${{ secrets.AZUREAPPSERVICE_TENANTID_5DF05B9BEC0E4C228E49F5CE8CD7BCD5 }}
           subscription-id: ${{ secrets.AZUREAPPSERVICE_SUBSCRIPTIONID_614F782E88D648FBBAE6E633F2B609D2 }}
 
-      - name: Disable Oryx build on App Service
-        run: |
-          APP_ID=$(az webapp list --query "[?name=='qualitas'].id" -o tsv)
-          az webapp config appsettings set --ids "$APP_ID" \
-            --settings SCM_DO_BUILD_DURING_DEPLOYMENT=false
-
       - name: 'Deploy to Azure Web App'
         id: deploy-to-webapp
         uses: azure/webapps-deploy@v3
         with:
           app-name: 'qualitas'
           slot-name: 'Production'
-          package: standalone.zip
-          startup-command: 'node server.js'
+          package: .
+          
