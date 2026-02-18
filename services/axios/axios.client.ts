@@ -6,7 +6,7 @@ const baseURL =
   "http://localhost:5030";
 
 export const api = axios.create({
-  baseURL,
+  baseURL: "https://qualitasnexus-web.azurewebsites.net",
   headers: {
     "Content-Type": "application/json",
   },
