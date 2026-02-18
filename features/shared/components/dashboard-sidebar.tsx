@@ -15,6 +15,7 @@ import {
   User,
   Settings,
   Zap,
+  Building2,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -41,6 +42,7 @@ const SIDEBAR_SECTIONS = [
     title: "ADMINISTRACIÓN",
     items: [
       { href: "/usuarios", label: "Usuarios", icon: Users, permission: null },
+      { href: "/organizacion", label: "Organización", icon: Building2, permission: null },
     ],
   },
 ] as const;

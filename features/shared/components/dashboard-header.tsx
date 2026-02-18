@@ -19,6 +19,7 @@ function getBreadcrumbs(pathname: string): { label: string; href?: string }[] {
   if (pathname === "/") return [{ label: "Dashboard" }];
   
   if (pathname.startsWith("/usuarios")) {
+    crumbs.push({ label: "Administración" });
     crumbs.push({ label: "Usuarios" });
   } else {
     crumbs.push({ label: pathname.split("/")[1] || "Página" });

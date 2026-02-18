@@ -4,7 +4,7 @@ import { useState } from "react";
 import { UsersTab } from "@/features/users/components/UsersTab";
 import { RolesTab } from "@/features/users/components/RolesTab";
 import { GroupsTab } from "@/features/users/components/GroupsTab";
-import { Users, Shield, UsersRound } from "lucide-react";
+import { Users, Shield, UsersRound, Lightbulb } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const SIDEBAR_ITEMS = [
@@ -19,15 +19,8 @@ export default function UsuariosPage() {
   return (
     <div className="flex h-screen gap-0 -m-6 md:-m-8">
       {/* Sidebar de tabs */}
-      <aside className="w-65 shrink-0 bg-slate-50/50 dark:bg-slate-900/50 border-r border-slate-200 dark:border-slate-800 flex flex-col">
-        <div className="p-6 pb-4 border-b border-slate-200 dark:border-slate-800">
-          <p className="text-sm font-medium uppercase tracking-wider text-slate-500 dark:text-slate-400">
-            Administración
-          </p>
-          <h1 className="mt-1 text-xl font-bold text-slate-900 dark:text-slate-100">
-            Gestión de Usuarios
-          </h1>
-        </div>
+      <aside className="w-64 shrink-0  dark:bg-slate-900/50 flex flex-col">
+    
         <div className="flex-1 overflow-y-auto p-4">
           <h2 className="mb-3 px-2 text-[10.5px] font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">
             Secciones
@@ -45,7 +38,7 @@ export default function UsuariosPage() {
                     "w-full flex items-center gap-3 rounded-md px-3 py-2.5 text-sm transition-all duration-150",
                     "relative group",
                     isActive
-                      ? "bg-slate-900 text-white font-medium shadow-sm dark:bg-slate-800"
+                      ? "bg-blue-600 text-white font-medium shadow-sm"
                       : "text-slate-700 hover:bg-slate-100 hover:text-slate-900 dark:text-slate-300 dark:hover:bg-slate-800/50 dark:hover:text-slate-100"
                   )}
                 >
@@ -65,6 +58,16 @@ export default function UsuariosPage() {
               );
             })}
           </nav>
+
+          {/* Caja de consejo */}
+          <div className="mt-6 rounded-lg bg-slate-100 dark:bg-slate-800/50 p-4 border border-slate-200 dark:border-slate-700">
+            <div className="flex items-start gap-3">
+              <Lightbulb className="h-5 w-5 text-amber-500 shrink-0 mt-0.5" />
+              <p className="text-xs text-slate-700 dark:text-slate-300 leading-relaxed">
+                Asigna roles específicos a cada usuario para controlar el acceso a los módulos del sistema.
+              </p>
+            </div>
+          </div>
         </div>
       </aside>
 

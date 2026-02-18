@@ -14,6 +14,9 @@ interface NavItem {
 const NAV_ITEMS: NavItem[] = [
   { href: "/", label: "Dashboard" },
   { href: "/usuarios", label: "Usuarios" },
+  { href: "/roles", label: "Roles" },
+  { href: "/grupos", label: "Grupos" },
+  { href: "/organizacion", label: "Organización" },
 ];
 
 interface CommandPaletteProps {

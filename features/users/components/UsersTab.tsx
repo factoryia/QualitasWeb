@@ -14,7 +14,15 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { TableSkeleton } from "@/components/ui/table-skeleton";
 import { ConfirmModal } from "@/components/shared/confirm-modal";
-import { Pencil, Trash2, Plus, Search, Filter, X } from "lucide-react";
+import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { Pencil, Trash2, Plus, Search, Filter, X, MoreVertical, Building2 } from "lucide-react";
+import { cn } from "@/lib/utils";
 
 const authFromStore = () => {
   const token = useAuthStore.getState().accessToken;
@@ -33,6 +41,7 @@ export function UsersTab() {
   const [page, setPage] = useState(1);
   const [loading, setLoading] = useState(true);
   const [roles, setRoles] = useState<RoleDto[]>([]);
+  const [userRolesMap, setUserRolesMap] = useState<Record<string, RoleDto[]>>({});
   const pageSize = 10;
 
   // Filtros
@@ -125,6 +134,30 @@ export function UsersTab() {
     if (!auth) return;
     rolesService.getRoles(auth).then(setRoles).catch(() => setRoles([]));
   }, [accessToken, tenant]);
+
+  // Cargar roles de usuarios cuando se carga la lista
+  useEffect(() => {
+    if (!auth || data.items.length === 0 || roles.length === 0) return;
+    const loadUserRoles = async () => {
+      const newMap: Record<string, RoleDto[]> = {};
+      const rolesById = new Map(roles.map((r) => [r.id, r]));
+      for (const user of data.items) {
+        if (!user.id) continue;
+        try {
+          const userRoles = await usersService.getUserRoles(user.id, auth);
+          const enabledRoleIds = userRoles
+            .filter((r) => r.enabled && r.roleId)
+            .map((r) => r.roleId!);
+          newMap[user.id] = enabledRoleIds.map((id) => rolesById.get(id)).filter(Boolean) as RoleDto[];
+        } catch {
+          newMap[user.id] = [];
+        }
+      }
+      setUserRolesMap(newMap);
+    };
+    loadUserRoles();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [data.items.length, roles.length, accessToken, tenant]);
 
   const handleDeleteConfirm = async () => {
     if (!deleteTarget) return;
@@ -311,7 +344,7 @@ export function UsersTab() {
             <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
             <Input
               type="text"
-              placeholder="Buscar por nombre, email o usuario..."
+              placeholder="Buscar por nombre, email o rol..."
               value={searchText}
               onChange={(e) => {
                 setSearchText(e.target.value);
@@ -320,20 +353,55 @@ export function UsersTab() {
               className="pl-9"
             />
           </div>
-          <Button
-            type="button"
-            variant="outline"
-            onClick={() => setShowFilters(!showFilters)}
-            className={showFilters ? "bg-slate-100 dark:bg-slate-800" : ""}
-          >
-            <Filter className="h-4 w-4" />
-            Filtros
-            {hasActiveFilters && (
-              <span className="ml-1 h-5 w-5 rounded-full bg-primary text-xs text-primary-foreground flex items-center justify-center">
-                {[searchText.trim(), filterIsActive !== undefined, filterEmailConfirmed !== undefined, filterRoleId].filter(Boolean).length}
-              </span>
-            )}
-          </Button>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button
+                type="button"
+                variant="outline"
+                className={cn(
+                  "inline-flex items-center gap-2",
+                  filterRoleId ? "border-blue-500 bg-blue-50 dark:bg-blue-950/20" : ""
+                )}
+              >
+                <Filter className="h-4 w-4" />
+                {filterRoleId
+                  ? roles.find((r) => r.id === filterRoleId)?.name || "Todos los roles"
+                  : "Todos los roles"}
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-48">
+              <DropdownMenuItem
+                onClick={() => {
+                  setFilterRoleId("");
+                  setPage(1);
+                }}
+              >
+                Todos los roles
+              </DropdownMenuItem>
+              {roles.map((role) => (
+                <DropdownMenuItem
+                  key={role.id}
+                  onClick={() => {
+                    setFilterRoleId(role.id);
+                    setPage(1);
+                  }}
+                >
+                  {role.name}
+                </DropdownMenuItem>
+              ))}
+            </DropdownMenuContent>
+          </DropdownMenu>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button type="button" variant="outline" className="inline-flex items-center gap-2">
+                <Building2 className="h-4 w-4" />
+                Todas las áreas
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-48">
+              <DropdownMenuItem>Todas las áreas</DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
           <Button
             type="button"
             onClick={() => {
@@ -341,90 +409,12 @@ export function UsersTab() {
               setCreateError("");
               setCreateRoleIds([]);
             }}
-            className="inline-flex items-center gap-2 rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90"
+            className="inline-flex items-center gap-2 rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700"
           >
             <Plus className="size-4" />
             Nuevo usuario
           </Button>
         </div>
-
-        {/* Panel de filtros */}
-        {showFilters && (
-          <div className="rounded-lg border border-slate-200 bg-slate-50 p-4 dark:border-slate-800 dark:bg-slate-900/50">
-            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-              <div>
-                <Label className="mb-1.5 block text-xs font-medium text-slate-700 dark:text-slate-300">
-                  Estado
-                </Label>
-                <select
-                  value={filterIsActive === undefined ? "" : filterIsActive ? "active" : "inactive"}
-                  onChange={(e) => {
-                    const val = e.target.value;
-                    setFilterIsActive(val === "" ? undefined : val === "active");
-                    setPage(1);
-                  }}
-                  className="w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm dark:border-slate-700 dark:bg-slate-800"
-                >
-                  <option value="">Todos</option>
-                  <option value="active">Activo</option>
-                  <option value="inactive">Inactivo</option>
-                </select>
-              </div>
-              <div>
-                <Label className="mb-1.5 block text-xs font-medium text-slate-700 dark:text-slate-300">
-                  Email confirmado
-                </Label>
-                <select
-                  value={filterEmailConfirmed === undefined ? "" : filterEmailConfirmed ? "yes" : "no"}
-                  onChange={(e) => {
-                    const val = e.target.value;
-                    setFilterEmailConfirmed(val === "" ? undefined : val === "yes");
-                    setPage(1);
-                  }}
-                  className="w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm dark:border-slate-700 dark:bg-slate-800"
-                >
-                  <option value="">Todos</option>
-                  <option value="yes">Sí</option>
-                  <option value="no">No</option>
-                </select>
-              </div>
-              <div>
-                <Label className="mb-1.5 block text-xs font-medium text-slate-700 dark:text-slate-300">
-                  Rol
-                </Label>
-                <select
-                  value={filterRoleId}
-                  onChange={(e) => {
-                    setFilterRoleId(e.target.value);
-                    setPage(1);
-                  }}
-                  className="w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm dark:border-slate-700 dark:bg-slate-800"
-                >
-                  <option value="">Todos los roles</option>
-                  {roles.map((role) => (
-                    <option key={role.id} value={role.id}>
-                      {role.name}
-                    </option>
-                  ))}
-                </select>
-              </div>
-              <div className="flex items-end">
-                {hasActiveFilters && (
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    onClick={clearFilters}
-                    className="w-full"
-                  >
-                    <X className="h-4 w-4 mr-1" />
-                    Limpiar filtros
-                  </Button>
-                )}
-              </div>
-            </div>
-          </div>
-        )}
       </div>
 
       {/* Modal crear usuario */}
@@ -657,10 +647,14 @@ export function UsersTab() {
               <table className="w-full text-sm">
                 <thead>
                   <tr className="border-b border-slate-200 bg-slate-50 dark:border-slate-800 dark:bg-slate-800/50">
-                    <th className="px-4 py-3 text-left font-semibold text-slate-900 dark:text-slate-100">Nombre</th>
-                    <th className="px-4 py-3 text-left font-semibold text-slate-900 dark:text-slate-100">Email</th>
-                    <th className="px-4 py-3 text-left font-semibold text-slate-900 dark:text-slate-100">Estado</th>
-                    <th className="px-4 py-3 text-right font-semibold text-slate-900 dark:text-slate-100">Acciones</th>
+                    <th className="px-4 py-3 text-left font-semibold text-slate-900 dark:text-slate-100">
+                      USUARIO / EMAIL
+                    </th>
+                    <th className="px-4 py-3 text-left font-semibold text-slate-900 dark:text-slate-100">
+                      ROL SISTEMA
+                    </th>
+                    <th className="px-4 py-3 text-left font-semibold text-slate-900 dark:text-slate-100">ESTADO</th>
+                    <th className="px-4 py-3 text-right font-semibold text-slate-900 dark:text-slate-100">ACCIONES</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -671,65 +665,124 @@ export function UsersTab() {
                       </td>
                     </tr>
                   ) : (
-                    data.items.map((user) => (
-                      <tr
-                        key={user.id ?? user.email ?? ""}
-                        className="border-b border-slate-100 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-800/30"
-                      >
-                        <td className="px-4 py-3">
-                          {[user.firstName, user.lastName].filter(Boolean).join(" ") || user.userName || "—"}
-                        </td>
-                        <td className="px-4 py-3">{user.email ?? "—"}</td>
-                        <td className="px-4 py-3">
-                          <span
-                            className={
-                              user.isActive
-                                ? "text-emerald-600 dark:text-emerald-400"
-                                : "text-slate-500"
-                            }
-                          >
-                            {user.isActive ? "Activo" : "Inactivo"}
-                          </span>
-                        </td>
-                        <td className="px-4 py-3 text-right">
-                          <Button
-                            type="button"
-                            variant="ghost"
-                            size="icon"
-                            onClick={() => openEdit(user)}
-                            className="mr-2 h-8 w-8 rounded text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-950/40"
-                          >
-                            <Pencil className="size-4" />
-                          </Button>
-                          <Button
-                            type="button"
-                            variant="ghost"
-                            size="icon"
-                            onClick={() => setDeleteTarget({ id: user.id ?? "" })}
-                            className="h-8 w-8 rounded text-red-600 hover:bg-red-50 dark:hover:bg-red-950/40"
-                          >
-                            <Trash2 className="size-4" />
-                          </Button>
-                        </td>
-                      </tr>
-                    ))
+                    data.items.map((user) => {
+                      const fullName = [user.firstName, user.lastName].filter(Boolean).join(" ") || user.userName || "";
+                      const initials = fullName
+                        .split(" ")
+                        .map((n) => n[0])
+                        .join("")
+                        .toUpperCase()
+                        .slice(0, 2) || user.email?.[0]?.toUpperCase() || "U";
+                      const userRoles = user.id ? userRolesMap[user.id] || [] : [];
+
+                      return (
+                        <tr
+                          key={user.id ?? user.email ?? ""}
+                          className="border-b border-slate-100 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-800/30"
+                        >
+                          <td className="px-4 py-3">
+                            <div className="flex items-center gap-3">
+                              <Avatar className="h-10 w-10">
+                                {user.imageUrl ? (
+                                  <AvatarImage src={user.imageUrl} alt={fullName} />
+                                ) : null}
+                                <AvatarFallback className="bg-slate-200 text-slate-700 dark:bg-slate-700 dark:text-slate-200 text-sm font-medium">
+                                  {initials}
+                                </AvatarFallback>
+                              </Avatar>
+                              <div>
+                                <div className="font-medium text-slate-900 dark:text-slate-100">{fullName || "—"}</div>
+                                <div className="text-xs text-slate-500 dark:text-slate-400">{user.email ?? "—"}</div>
+                              </div>
+                            </div>
+                          </td>
+                          <td className="px-4 py-3">
+                            {userRoles.length > 0 ? (
+                              <div className="flex flex-wrap gap-1">
+                                {userRoles.map((role) => (
+                                  <span
+                                    key={role.id}
+                                    className="inline-flex items-center rounded-full bg-blue-100 px-2.5 py-0.5 text-xs font-medium text-blue-800 dark:bg-blue-900/30 dark:text-blue-300"
+                                  >
+                                    {role.name}
+                                  </span>
+                                ))}
+                              </div>
+                            ) : (
+                              <span className="text-slate-400">—</span>
+                            )}
+                          </td>
+                          <td className="px-4 py-3">
+                            <div className="flex items-center gap-2">
+                              <div
+                                className={cn(
+                                  "h-2 w-2 rounded-full",
+                                  user.isActive ? "bg-emerald-500" : "bg-slate-400"
+                                )}
+                              />
+                              <span
+                                className={
+                                  user.isActive
+                                    ? "text-emerald-600 dark:text-emerald-400 font-medium"
+                                    : "text-slate-500"
+                                }
+                              >
+                                {user.isActive ? "Activo" : "Inactivo"}
+                              </span>
+                            </div>
+                          </td>
+                          <td className="px-4 py-3 text-right">
+                            <DropdownMenu>
+                              <DropdownMenuTrigger asChild>
+                                <Button
+                                  type="button"
+                                  variant="ghost"
+                                  size="icon"
+                                  className="h-8 w-8 rounded text-slate-600 hover:bg-slate-100 dark:hover:bg-slate-800"
+                                >
+                                  <MoreVertical className="size-4" />
+                                </Button>
+                              </DropdownMenuTrigger>
+                              <DropdownMenuContent align="end">
+                                <DropdownMenuItem onClick={() => openEdit(user)}>
+                                  <Pencil className="h-4 w-4 mr-2" />
+                                  Editar
+                                </DropdownMenuItem>
+                                <DropdownMenuItem
+                                  onClick={() => setDeleteTarget({ id: user.id ?? "" })}
+                                  className="text-red-600 focus:text-red-600 dark:text-red-400"
+                                >
+                                  <Trash2 className="h-4 w-4 mr-2" />
+                                  Eliminar
+                                </DropdownMenuItem>
+                              </DropdownMenuContent>
+                            </DropdownMenu>
+                          </td>
+                        </tr>
+                      );
+                    })
                   )}
                 </tbody>
               </table>
             </div>
-            {data.totalPages > 1 && (
-              <div className="flex items-center justify-end gap-2 border-t border-slate-200 px-4 py-3 dark:border-slate-800">
-                <Button variant="outline" size="sm" disabled={page <= 1} onClick={() => setPage((p) => Math.max(1, p - 1))}>
-                  &lt;
-                </Button>
-                <span className="text-sm text-slate-600 dark:text-slate-400">
-                  Página {page} de {data.totalPages}
-                </span>
-                <Button variant="outline" size="sm" disabled={page >= data.totalPages} onClick={() => setPage((p) => p + 1)}>
-                  &gt;
-                </Button>
-              </div>
-            )}
+            <div className="flex items-center justify-between border-t border-slate-200 px-4 py-3 dark:border-slate-800">
+              <span className="text-sm text-slate-600 dark:text-slate-400">
+                Mostrando {data.items.length} {data.items.length === 1 ? "resultado" : "resultados"}
+              </span>
+              {data.totalPages > 1 && (
+                <div className="flex items-center gap-2">
+                  <Button variant="outline" size="sm" disabled={page <= 1} onClick={() => setPage((p) => Math.max(1, p - 1))}>
+                    &lt;
+                  </Button>
+                  <span className="text-sm text-slate-600 dark:text-slate-400">
+                    Página {page} de {data.totalPages}
+                  </span>
+                  <Button variant="outline" size="sm" disabled={page >= data.totalPages} onClick={() => setPage((p) => p + 1)}>
+                    &gt;
+                  </Button>
+                </div>
+              )}
+            </div>
           </>
         )}
       </div>
