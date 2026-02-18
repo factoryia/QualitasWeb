@@ -20,6 +20,17 @@ function getBreadcrumbs(pathname: string): { label: string; href?: string }[] {
   
   if (pathname.startsWith("/usuarios")) {
     crumbs.push({ label: "Usuarios" });
+  } else if (pathname.startsWith("/organizacion")) {
+    crumbs.push({ label: "Organización" });
+  } else if (pathname.startsWith("/normatividad")) {
+    crumbs.push({ label: "Normatividad" });
+    if (pathname.includes("/marcos-normativos")) {
+      crumbs.push({ label: "Marcos Normativos" });
+    } else if (pathname.includes("/mipg")) {
+      crumbs.push({ label: "MIPG" });
+    } else if (pathname.includes("/cumplimiento")) {
+      crumbs.push({ label: "Cumplimiento" });
+    }
   } else {
     crumbs.push({ label: pathname.split("/")[1] || "Página" });
   }

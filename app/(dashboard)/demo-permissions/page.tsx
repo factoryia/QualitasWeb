@@ -35,7 +35,7 @@ export default function DemoPermissionsPage() {
 
   if (!isMounted || !isAuthenticated) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-red-50 to-orange-50 p-6 flex items-center justify-center">
+      <div className="min-h-screen bg-linear-to-br from-red-50 to-orange-50 p-6 flex items-center justify-center">
         <div className="bg-white rounded-lg shadow-lg p-8 text-center max-w-md">
           <h1 className="text-2xl font-bold text-red-600 mb-4">⚠️ No Autenticado</h1>
           <p className="text-gray-600 mb-6">Debes iniciar sesión para ver la demostración</p>
@@ -48,7 +48,7 @@ export default function DemoPermissionsPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-50 p-6">
+    <div className="min-h-screen bg-linear-to-br from-blue-50 to-indigo-50 p-6">
       <div className="max-w-7xl mx-auto">
         {/* Header */}
         <div className="mb-8">
@@ -113,7 +113,7 @@ export default function DemoPermissionsPage() {
                     {permissions.map((perm, idx) => (
                       <div
                         key={idx}
-                        className="p-3 bg-gradient-to-r from-green-50 to-emerald-50 border border-green-200 rounded-lg text-sm font-mono"
+                        className="p-3 bg-linear-to-r from-green-50 to-emerald-50 border border-green-200 rounded-lg text-sm font-mono"
                       >
                         <span className="text-green-600 font-bold">✓</span> {perm}
                       </div>
