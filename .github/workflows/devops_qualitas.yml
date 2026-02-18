@@ -33,7 +33,14 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: node-app
-          path: .
+          path: |
+            .next/
+            public/
+            package.json
+            package-lock.json
+            next.config.ts
+            postcss.config.mjs
+            tsconfig.json
 
   deploy:
     runs-on: ubuntu-latest
