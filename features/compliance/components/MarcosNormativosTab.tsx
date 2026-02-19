@@ -282,7 +282,7 @@ export function MarcosNormativosTab() {
       )}
 
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-        <DialogContent className="w-[calc(100%-2rem)] max-w-md max-h-[90vh] overflow-y-auto sm:max-h-[85vh]">
+        <DialogContent className="w-[calc(100%-2rem)] max-w-md max-h-[90vh] overflow-y-auto sm:max-h-[85vh] rounded-lg">
           <DialogHeader>
             <DialogTitle>{editMarco ? "Editar marco normativo" : "Nuevo marco normativo"}</DialogTitle>
           </DialogHeader>

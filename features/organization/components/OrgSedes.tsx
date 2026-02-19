@@ -228,7 +228,7 @@ export function OrgSedes({ orgId }: Props) {
       )}
 
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-        <DialogContent className="sm:max-w-md">
+        <DialogContent className="sm:max-w-md rounded-lg">
           <DialogHeader>
             <DialogTitle>{editUnit ? "Editar unidad" : "Nueva unidad organizativa"}</DialogTitle>
           </DialogHeader>

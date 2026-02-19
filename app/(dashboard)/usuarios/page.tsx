@@ -6,7 +6,7 @@ import { RolesTab } from "@/features/users/components/RolesTab";
 import { GroupsTab } from "@/features/users/components/GroupsTab";
 import { Users, Shield, UsersRound, Lightbulb } from "lucide-react";
 import { cn } from "@/lib/utils";
-// Importamos los componentes de Tabs que ya tienes definidos
+// Importamos los componentes de Tabs que ya tenemos definidos
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 
 const SIDEBAR_ITEMS = [
@@ -23,7 +23,7 @@ export default function UsuariosPage() {
     <div className="flex flex-col lg:flex-row h-full gap-0 min-h-[calc(100vh-4rem)]">
       
       {/* 1. MODO PILLS (Visible solo en móvil/tablet < lg) */}
-      <div className="lg:hidden p-4 bg-background border-b sticky top-0 z-10 self-center">
+      <div className="lg:hidden p-4 bg-background border-b top-0 z-10 self-center rounded-2xl">
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-fit">
           <TabsList className="w-full justify-start overflow-x-auto bg-slate-100/50 p-1 h-auto gap-1">
             {SIDEBAR_ITEMS.map((item) => {
