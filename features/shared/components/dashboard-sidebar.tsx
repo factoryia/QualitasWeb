@@ -94,6 +94,16 @@ const SIDEBAR_SECTIONS: Array<{ title: string; items: SidebarItem[] }> = [
       },
     ],
   },
+  {
+    title: "CONTROL",
+    items: [
+      { href: "/auditoria", 
+        label: "Auditoría", 
+        icon: Zap, 
+        permission: null 
+      },
+    ],
+  },
 ] as const;
 
 interface DashboardSidebarProps {
