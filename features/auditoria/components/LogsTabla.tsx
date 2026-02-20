@@ -30,11 +30,22 @@ export function LogsTabla({
   loading,
   page,
   pageSize,
+  totalCount,
   onPageChange,
   onPageSizeChange,
   onViewDetail,
   getSeverityBadge
 }: LogsTablaProps) {
+  
+  // Cálculo de total de páginas
+  const totalPages = Math.ceil(totalCount / pageSize) || 1;
+
+  const eventTypeLabels: Record<string | number, string> = {
+    "2": "Seguridad",
+    "3": "Sistema",
+    "4": "Excepción"
+  };
+
   return (
     <div className="rounded-lg border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-950 shadow-sm overflow-hidden">
       {loading ? (
@@ -46,7 +57,7 @@ export function LogsTabla({
               <tr className="border-b border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/50">
                 <th className="px-4 py-3 text-[11px] font-bold uppercase text-slate-500 tracking-wider">Fecha (UTC)</th>
                 <th className="px-4 py-3 text-[11px] font-bold uppercase text-slate-500 tracking-wider">Usuario</th>
-                <th className="px-4 py-3 text-[11px] font-bold uppercase text-slate-500 tracking-wider">Evento / Fuente</th>
+                <th className="px-4 py-3 text-[11px] font-bold uppercase text-slate-500 tracking-wider">Tipo de evento</th>
                 <th className="px-4 py-3 text-[11px] font-bold uppercase text-slate-500 tracking-wider">Severidad</th>
                 <th className="px-4 py-3 text-[11px] font-bold uppercase text-slate-500 tracking-wider">Trace ID</th>
                 <th className="px-4 py-3 w-[40px]"></th>
@@ -70,7 +81,9 @@ export function LogsTabla({
                   </td>
                   <td className="px-4 py-3">
                     <div className="flex flex-col">
-                      <span className="font-semibold text-slate-700 dark:text-slate-200">Tipo {log.eventType}</span>
+                      <span className="font-semibold text-slate-700 dark:text-slate-200">
+                        {eventTypeLabels[log.eventType] || `Tipo ${log.eventType}`}
+                      </span>
                       <span className="text-[10px] text-slate-400 uppercase font-bold tracking-tighter">{log.source || "API-Compliance"}</span>
                     </div>
                   </td>
@@ -88,26 +101,54 @@ export function LogsTabla({
         </div>
       )}
 
-      {/* PAGINACIÓN */}
-      <div className="p-4 border-t border-slate-200 dark:border-slate-800 flex items-center justify-between bg-slate-50/30">
-        <div className="flex items-center gap-2">
-          <Button 
-            variant="outline" size="icon" className="h-8 w-8"
-            onClick={() => onPageChange(Math.max(1, page - 1))}
-            disabled={page === 1 || loading}
-          >
-            <ChevronLeft size={14} />
-          </Button>
-          <span className="text-xs font-semibold text-slate-600">Página {page}</span>
-          <Button 
-            variant="outline" size="icon" className="h-8 w-8"
-            onClick={() => onPageChange(page + 1)}
-            disabled={logs.length < pageSize || loading}
-          >
-            <ChevronRight size={14} />
-          </Button>
+      {/* PAGINACIÓN MEJORADA */}
+      <div className="p-4 border-t border-slate-200 dark:border-slate-800 flex flex-wrap items-center justify-between gap-4 bg-slate-50/30">
+        
+        {/* Lado izquierdo: Navegación de páginas */}
+        <div className="flex items-center gap-4">
+          <div className="flex items-center gap-1.5">
+            <Button 
+              variant="outline" size="icon" className="h-8 w-8"
+              onClick={() => onPageChange(Math.max(1, page - 1))}
+              disabled={page === 1 || loading}
+            >
+              <ChevronLeft size={14} />
+            </Button>
+            
+            <div className="flex items-center gap-2 px-2">
+              <span className="text-xs text-slate-500 font-medium">Página</span>
+              <Select 
+                value={page.toString()} 
+                onValueChange={(v) => onPageChange(Number(v))}
+                disabled={loading}
+              >
+                <SelectTrigger className="h-8 w-[65px] text-xs font-bold">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {Array.from({ length: totalPages }, (_, i) => i + 1).map((p) => (
+                    <SelectItem key={p} value={p.toString()}>{p}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <span className="text-xs text-slate-500 font-medium">de {totalPages}</span>
+            </div>
+
+            <Button 
+              variant="outline" size="icon" className="h-8 w-8"
+              onClick={() => onPageChange(page + 1)}
+              disabled={page >= totalPages || loading}
+            >
+              <ChevronRight size={14} />
+            </Button>
+          </div>
+          
+          <span className="hidden sm:block text-[10px] text-slate-400 font-bold uppercase tracking-widest">
+            Total: {totalCount} registros
+          </span>
         </div>
         
+        {/* Lado derecho: Tamaño de página */}
         <div className="flex items-center gap-2">
           <span className="text-[11px] text-slate-400 uppercase font-bold">Mostrar</span>
           <Select 

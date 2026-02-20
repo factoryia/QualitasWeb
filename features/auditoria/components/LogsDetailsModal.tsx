@@ -40,7 +40,7 @@ export function LogDetailModal({
 
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-4xl h-[90vh] md:h-auto md:max-h-[85vh] p-0 flex flex-col border-slate-200 dark:border-slate-800 shadow-2xl overflow-hidden">
+      <DialogContent className="max-w-4xl h-[90vh] md:h-auto md:max-h-[85vh] p-0 flex flex-col border-slate-200 dark:border-slate-800 shadow-2xl overflow-hidden rounded-lg">
         
         {/* HEADER FIJO */}
         <DialogHeader className="p-4 md:p-6 border-b bg-white dark:bg-slate-950 sticky top-0 z-10">
@@ -127,11 +127,22 @@ export function LogDetailModal({
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 mt-1">
                       <div className="flex flex-col min-w-0">
                         <span className="text-[9px] text-slate-500 font-bold uppercase">Trace ID</span>
-                        <span className="text-[10px] font-mono truncate text-blue-600">{log.traceId}</span>
+                        <span className="text-[10px] font-mono truncate text-blue-600" >{log.traceId}</span>
+                        <Copy 
+                          size={12} 
+                          className="cursor-pointer hover:text-blue-500 mt-1" 
+                          onClick={() => copyToClipboard(log.traceId || "")} 
+                        />
+                        
                       </div>
                       <div className="flex flex-col min-w-0">
                         <span className="text-[9px] text-slate-500 font-bold uppercase">Correlation</span>
                         <span className="text-[10px] font-mono truncate text-slate-600">{log.correlationId}</span>
+                        <Copy 
+                          size={12} 
+                          className="cursor-pointer hover:text-slate-600 mt-1" 
+                          onClick={() => copyToClipboard(log.correlationId || "")} 
+                        />
                       </div>
                     </div>
                   </div>
@@ -149,7 +160,15 @@ export function LogDetailModal({
                 
                 {log.payload?.stackTop && (
                   <div className="space-y-2">
-                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-tighter">Stack Trace</p>
+                    <div className="grid-cols-1 sm:grid-cols-3 gap-4 flex items-center">
+                      <p className="text-[10px] font-bold text-slate-400 uppercase tracking-tighter">Stack Trace</p>
+                      <span className="text-[9px] md:text-[10px] font-mono text-slate-500 break-all">Copiar StockTrace</span>
+                      <Copy 
+                        size={12} 
+                        className="cursor-pointer hover:text-blue-500 mb-1" 
+                        onClick={() => copyToClipboard(log.payload?.stackTop?.join("\n") || "")} 
+                      />
+                    </div>
                     <div className="bg-slate-950 rounded-lg p-3 border border-slate-800">
                       <div className="max-h-48 overflow-y-auto space-y-2 custom-scrollbar">
                         {log.payload.stackTop.map((line: string, idx: number) => (
@@ -171,7 +190,7 @@ export function LogDetailModal({
                     <Button 
                       variant="secondary" 
                       size="sm" 
-                      className="absolute top-2 right-2 h-7 px-2 text-[10px] opacity-100 md:opacity-0 md:group-hover:opacity-100 bg-slate-800"
+                      className="absolute top-2 right-2 h-7 px-2 text-[10px] opacity-100 md:opacity-0 md:group-hover:opacity-100 bg-slate-300"
                       onClick={() => copyToClipboard(JSON.stringify(log.payload, null, 2))}
                     >
                       Copiar
