@@ -36,6 +36,23 @@ export interface AuditItemDto {
   tags: number;
 }
 
+export interface AuditQueryParams {
+  PageNumber?: number;
+  PageSize?: number;
+  Sort?: string;
+  FromUtc?: string;
+  ToUtc?: string;
+  TenantId?: string;
+  UserId?: string;
+  EventType?: number;
+  Severity?: number;
+  Tags?: number;
+  Source?: string;
+  CorrelationId?: string;
+  TraceId?: string;
+  Search?: string;
+}
+
 export interface AuditDetailDto extends AuditItemDto {
   receivedAtUtc: string;
   spanId: string | null;
@@ -63,20 +80,24 @@ const BASE = "/api/v1/audits";
 
 class AuditService {
   /** GET /api/v1/audits - Lista paginada de auditorías */
-  async getAudits(pageNumber = 1, pageSize = 10, auth?: AuthHeaders): Promise<PaginatedResponse<AuditItemDto> | null> {
-    try {
-      const authHeaders_ = authHeaders(auth ?? authFromStore());
-      const { data } = await api.get<PaginatedResponse<AuditItemDto>>(BASE, {
-        params: { pageNumber, pageSize },
-        ...(authHeaders_ && { headers: authHeaders_ }),
-      });
-      return data;
-    } catch (error: unknown) {
-      console.error("Error fetching audits:", error);
-      toast.error("Error al cargar el historial de auditoría");
-      return null;
-    }
+async getAudits(params: AuditQueryParams, auth?: AuthHeaders): Promise<PaginatedResponse<AuditItemDto> | null> {
+  try {
+    const authHeaders_ = authHeaders(auth ?? authFromStore());
+    
+    const { data } = await api.get<PaginatedResponse<AuditItemDto>>(BASE, {
+      params, // Axios se encarga de convertir el objeto en ?Key=Value&Key2=Value2
+      ...(authHeaders_ && { headers: authHeaders_ }),
+    });
+    
+    return data;
+  } catch (error: unknown) {
+    console.error("Error fetching audits:", error);
+    toast.error("Error al cargar el historial de auditoría");
+    return null;
   }
+}
+
+  
 
   /** GET /api/v1/audits/{id} - Detalle completo con payload */
   async getAuditById(id: string, auth?: AuthHeaders): Promise<AuditDetailDto | null> {

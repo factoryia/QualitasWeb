@@ -118,6 +118,11 @@ export function LogDetailModal({
                     <p className="text-[10px] font-bold text-slate-400 uppercase">Actor</p>
                     <p className="text-sm font-bold truncate">{log.userName || "Sistema Interno"}</p>
                     <p className="text-[10px] text-slate-500 font-mono truncate">{log.userId || "service-account"}</p>
+                    <Copy 
+                      size={12} 
+                      className="cursor-pointer hover:text-blue-500 mt-1" 
+                      onClick={() => copyToClipboard(log.userId || "")} 
+                    />
                   </div>
                 </div>
                 <div className="flex items-start gap-3 md:border-l md:pl-4 border-slate-200 dark:border-slate-700">

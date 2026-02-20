@@ -26,11 +26,15 @@ export function AuditGeneral() {
     try {
       const [summaryData, logsData] = await Promise.all([
         auditService.getAuditSummary(),
-        auditService.getAudits(1, 3), 
+        // ANTES: auditService.getAudits(1, 3) -> ESTO DABA ERROR
+        // AHORA: Enviamos el objeto esperado por el nuevo Service
+        auditService.getAudits({ PageNumber: 1, PageSize: 3 }), 
       ]);
 
       if (summaryData) setSummary(summaryData);
       if (logsData) setRecentLogs(logsData.items);
+    } catch (error) {
+      console.error("Error cargando resumen:", error);
     } finally {
       setLoading(false);
     }
