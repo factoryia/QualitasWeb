@@ -142,12 +142,11 @@ export function SystemLogs() {
               <SelectValue placeholder="Campo" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="Search">General (Search)</SelectItem>
+              <SelectItem value="Search">Sin filtro</SelectItem>
               <SelectItem value="TraceId">Trace ID</SelectItem>
               <SelectItem value="CorrelationId">Correlation ID</SelectItem>
               <SelectItem value="TenantId">Tenant ID</SelectItem>
               <SelectItem value="UserId">User ID</SelectItem>
-              <SelectItem value="Source">Source</SelectItem>
             </SelectContent>
           </Select>
 
