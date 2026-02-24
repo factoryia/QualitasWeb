@@ -359,14 +359,16 @@ export function UsersTab() {
                 type="button"
                 variant="outline"
                 className={cn(
-                  "inline-flex items-center gap-2",
-                  filterRoleId ? "border-blue-500 bg-blue-50 dark:bg-blue-950/20" : ""
-                )}
-              >
-                <Filter className="h-4 w-4" />
-                {filterRoleId
-                  ? roles.find((r) => r.id === filterRoleId)?.name || "Todos los roles"
-                  : "Todos los roles"}
+                    "flex items-center gap-2 px-2 md:px-4", // Ajustamos padding lateral en móvil
+                    filterRoleId ? "border-blue-500 bg-blue-50 dark:bg-blue-950/20" : ""
+                  )}
+                >
+                  <Filter className="h-4 w-4 shrink-0" />
+                  <span className="hidden md:inline">
+                    {filterRoleId
+                      ? roles.find((r) => r.id === filterRoleId)?.name || "Roles"
+                      : "Todos los roles"}
+                  </span>
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="w-48">
@@ -393,9 +395,9 @@ export function UsersTab() {
           </DropdownMenu>
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button type="button" variant="outline" className="inline-flex items-center gap-2">
-                <Building2 className="h-4 w-4" />
-                Todas las áreas
+              <Button type="button" variant="outline" className="flex justify-between gap-2 px-2 md:px-4">
+                <Building2 className="h-4 w-4 shrink-0" />
+                <span className="hidden md:inline">Todas las áreas</span>
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="w-48">
@@ -411,8 +413,8 @@ export function UsersTab() {
             }}
             className="inline-flex items-center gap-2 rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700"
           >
-            <Plus className="size-4" />
-            Nuevo usuario
+            <Plus className="size-4 shrink-0" />
+           <span className="hidden md:inline">Nuevo usuario</span>
           </Button>
         </div>
       </div>

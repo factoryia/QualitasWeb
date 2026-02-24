@@ -10,7 +10,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Users } from "lucide-react";
+import { Users, BriefcaseBusiness } from "lucide-react";
 
 export default function DashboardPage() {
   const user = useAuthStore((s) => s.user);
@@ -21,7 +21,12 @@ export default function DashboardPage() {
       description: "Gestionar usuarios, roles y grupos",
       href: "/usuarios",
       icon: Users,
-    },
+    },{
+      title: "Organizacion",
+      description: "Configurar identidad institucional, sedes y estructura organizacional",
+      href: "/organizacion",
+      icon: BriefcaseBusiness,
+    }
   ];
 
   return (
