@@ -7,13 +7,14 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { complianceService, type MarcoNormativoDto } from "../services/compliance.service";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Plus, Search, FileText, Pencil, Trash2, Calendar, CheckCircle2, XCircle } from "lucide-react";
+import { Plus, Search, FileText, Pencil, Trash2, Calendar, ChevronRight, Settings2, ClipboardCheck, Info, ChevronLeft } from "lucide-react";
 import { cn } from "@/lib/utils";
 import toast from "react-hot-toast";
+import { MarcoNormativoForm } from "@/features/compliance/components/MarcoNormativoForm";
+import { MarcoNormativoList } from "./MarcosNormativosList";
 
 interface MarcoForm {
   codigo: string;
@@ -27,109 +28,76 @@ interface MarcoForm {
 
 export function MarcosNormativosTab() {
   const [marcos, setMarcos] = useState<MarcoNormativoDto[]>([]);
+  const [selectedId, setSelectedId] = useState<string | null>(null);
   const [search, setSearch] = useState("");
   const [showInactive, setShowInactive] = useState(true);
   const [loading, setLoading] = useState(true);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editMarco, setEditMarco] = useState<MarcoNormativoDto | null>(null);
-  const [form, setForm] = useState<MarcoForm>({
-    codigo: "",
-    nombre: "",
-    tipo: "",
-    fechaVigencia: "",
-    esObligatorio: true,
-    version: "",
-    descripcion: "",
-  });
+  
   const [saving, setSaving] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState<MarcoNormativoDto | null>(null);
+  // Estados para paginación local
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
 
   const fetchData = async () => {
     setLoading(true);
     const list = await complianceService.getAllMarcosNormativos(true);
     setMarcos(list);
+    if (list.length > 0 && !selectedId) {
+      setSelectedId(list[0].id);
+    }
     setLoading(false);
   };
+  const filteredFullList = marcos
+    .filter((m) => showInactive || m.isActive !== false)
+    .filter((m) =>
+      m.nombre.toLowerCase().includes(search.toLowerCase()) ||
+      m.codigo?.toLowerCase().includes(search.toLowerCase())
+  );
+  const totalCount = filteredFullList.length;
+  const totalPages = Math.ceil(totalCount / pageSize);
+  
+  const paginatedList = filteredFullList.slice(
+    (page - 1) * pageSize,
+    page * pageSize
+  );
+
+  // Resetear a la página 1 si cambia la búsqueda
+  useEffect(() => {
+    setPage(1);
+  }, [search, showInactive]);
 
   useEffect(() => {
     fetchData();
   }, []);
-
-  const openAdd = () => {
-    setEditMarco(null);
-    setForm({
-      codigo: "",
-      nombre: "",
-      tipo: "",
-      fechaVigencia: "",
-      esObligatorio: true,
-      version: "",
-      descripcion: "",
-    });
+const openAdd = () => {
+    setEditMarco(null); // Indicamos que es uno nuevo
     setDialogOpen(true);
   };
 
   const openEdit = (m: MarcoNormativoDto) => {
-    setEditMarco(m);
-    setForm({
-      codigo: m.codigo,
-      nombre: m.nombre,
-      tipo: m.tipo,
-      fechaVigencia: m.fechaVigencia.split("T")[0],
-      esObligatorio: m.esObligatorio,
-      version: m.version ?? "",
-      descripcion: m.descripcion ?? "",
-    });
+    setEditMarco(m); // Pasamos el objeto a editar
     setDialogOpen(true);
   };
 
-  const handleSave = async () => {
-    if (!form.nombre.trim()) {
-      toast.error("Nombre requerido");
-      return;
-    }
-    if (!form.codigo.trim()) {
-      toast.error("Código requerido");
-      return;
-    }
-    if (!form.tipo.trim()) {
-      toast.error("Tipo requerido");
-      return;
-    }
-    if (!form.fechaVigencia) {
-      toast.error("Fecha de vigencia requerida");
-      return;
-    }
+  const handleSaveSubmit = async (formData: MarcoForm) => {
     setSaving(true);
+    const fechaVigenciaISO = new Date(formData.fechaVigencia + "T00:00:00Z").toISOString();
+    const payload = { ...formData, fechaVigencia: fechaVigenciaISO };
+
+    let success = false;
     if (editMarco) {
-      const fechaVigenciaISO = new Date(form.fechaVigencia + "T00:00:00Z").toISOString();
-      const success = await complianceService.updateMarcoNormativoById(editMarco.id, {
-        nombre: form.nombre,
-        tipo: form.tipo,
-        fechaVigencia: fechaVigenciaISO,
-        esObligatorio: form.esObligatorio,
-        version: form.version || null,
-        descripcion: form.descripcion || null,
-      });
-      if (success) {
-        setDialogOpen(false);
-        fetchData();
-      }
+      success = await complianceService.updateMarcoNormativoById(editMarco.id, payload);
     } else {
-      const fechaVigenciaISO = new Date(form.fechaVigencia + "T00:00:00Z").toISOString();
-      const created = await complianceService.createMarcoNormativo({
-        codigo: form.codigo,
-        nombre: form.nombre,
-        tipo: form.tipo,
-        fechaVigencia: fechaVigenciaISO,
-        esObligatorio: form.esObligatorio,
-        version: form.version || null,
-        descripcion: form.descripcion || null,
-      });
-      if (created) {
-        setDialogOpen(false);
-        fetchData();
-      }
+      const created = await complianceService.createMarcoNormativo(payload);
+      success = !!created;
+    }
+
+    if (success) {
+      setDialogOpen(false);
+      fetchData();
     }
     setSaving(false);
   };
@@ -138,243 +106,174 @@ export function MarcosNormativosTab() {
     if (!deleteTarget) return;
     const success = await complianceService.deleteMarcoNormativo(deleteTarget.id);
     if (success) {
+      if (selectedId === deleteTarget.id) setSelectedId(null);
       setDeleteTarget(null);
       fetchData();
     }
   };
 
   const filtered = marcos
-    .filter((m) => showInactive || (m.isActive !== false))
-    .filter(
-      (m) =>
-        m.nombre.toLowerCase().includes(search.toLowerCase()) ||
-        (m.codigo && m.codigo.toLowerCase().includes(search.toLowerCase())) ||
-        (m.tipo && m.tipo.toLowerCase().includes(search.toLowerCase()))
+    .filter((m) => showInactive || m.isActive !== false)
+    .filter((m) =>
+      m.nombre.toLowerCase().includes(search.toLowerCase()) ||
+      m.codigo?.toLowerCase().includes(search.toLowerCase())
     );
+
+  const selectedMarco = marcos.find((m) => m.id === selectedId);
 
   if (loading) {
     return (
-      <div className="space-y-4 pt-4">
-        <div className="flex items-center gap-3 flex-wrap">
-          <Skeleton className="h-10 flex-1 max-w-sm" />
-          <div className="flex items-center gap-2">
-            <Skeleton className="h-5 w-5 rounded" />
-            <Skeleton className="h-4 w-28" />
-          </div>
-          <Skeleton className="h-9 w-40" />
-        </div>
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 min-w-0">
-          {[1, 2, 3, 4, 5, 6].map((i) => (
-            <Card key={i}>
-              <CardContent className="p-4 space-y-3">
-                <div className="flex items-start justify-between gap-2">
-                  <div className="flex items-center gap-2">
-                    <Skeleton className="h-4 w-4 rounded" />
-                    <Skeleton className="h-4 w-32" />
-                  </div>
-                </div>
-                <Skeleton className="h-3 w-20" />
-                <Skeleton className="h-3 w-full" />
-                <Skeleton className="h-3 w-3/4" />
-                <div className="flex gap-1 pt-1">
-                  <Skeleton className="h-7 w-7 rounded" />
-                  <Skeleton className="h-7 w-7 rounded" />
-                </div>
-              </CardContent>
-            </Card>
-          ))}
-        </div>
+      <div className="flex gap-6 h-[600px] pt-4">
+        <Skeleton className="w-80 h-full rounded-xl" />
+        <Skeleton className="flex-1 h-full rounded-xl" />
       </div>
     );
   }
 
   return (
-    <div className="space-y-4 pt-4 min-w-0">
-      <div className="flex flex-col sm:flex-row sm:items-center gap-3 sm:flex-wrap">
-        <div className="relative w-full sm:flex-1 sm:min-w-0 sm:max-w-sm">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
-          <Input
-            placeholder="Buscar por nombre, código o tipo..."
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            className="pl-9 w-full"
-          />
-        </div>
-        <div className="flex items-center gap-2 shrink-0">
-          <Switch id="show-inactive" checked={showInactive} onCheckedChange={setShowInactive} />
-          <Label htmlFor="show-inactive" className="text-sm text-muted-foreground whitespace-nowrap">
-            Incluir inactivos
-          </Label>
-        </div>
-        <Button size="sm" onClick={openAdd} className="w-full sm:w-auto">
-          <Plus className="h-4 w-4 mr-1 shrink-0" /> Nuevo marco
-        </Button>
-      </div>
+    <div className="space-y-6 pt-2">
+      <div className="flex flex-col lg:flex-row gap-6 items-start">
+        {/* 1. LISTA (COMPONENTE APARTE) */}
+        <MarcoNormativoList 
+          marcos={marcos}
+          selectedId={selectedId}
+          onSelect={setSelectedId}
+          onAddClick={openAdd}
+        />
 
-      {filtered.length === 0 ? (
-        <Card>
-          <CardContent className="py-12 text-center text-muted-foreground">
-            <FileText className="mx-auto mb-2 h-8 w-8 opacity-40" />
-            <p>No hay marcos normativos registrados.</p>
-          </CardContent>
-        </Card>
-      ) : (
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 min-w-0">
-          {filtered.map((m) => (
-            <Card
-              key={m.id}
-              className={cn("relative overflow-hidden", m.isActive === false && "opacity-60")}
-            >
-              <CardContent className="p-4 space-y-3">
-                <div className="flex items-start justify-between gap-2">
-                  <div className="flex items-center gap-2 min-w-0">
-                    <FileText className="h-4 w-4 text-primary shrink-0" />
-                    <h3 className="font-semibold text-sm truncate">{m.nombre}</h3>
+        {/* REVISION PENDIENTE NO MUESTRA TODA LA INFORMACION DE LA BASE DE DATOS POR QUE NO SE SABE QUE CAMPOS SE VAN A USAR */}
+
+        {/* CONTENIDO PRINCIPAL: DETALLE DEL MARCO //// PENDIENTEEEEEEE*/}
+        <div className="flex-1 w-full min-w-0">
+          {selectedMarco ? (
+            <Card className="shadow-md border-gray-200 overflow-hidden min-h-[600px] flex flex-col">
+              {/* Header del detalle */}
+              <div className="px-6 py-4 border-b bg-gray-50/30 flex flex-col md:flex-row md:items-center justify-between gap-4">
+                <div className="flex items-center gap-3">
+                  <div className="p-2 bg-white rounded-lg shadow-sm border border-gray-100">
+                    <Settings2 className="h-5 w-5 text-gray-500" />
                   </div>
-                  <div className="flex gap-1 shrink-0">
-                    {m.isActive === false && (
-                      <Badge variant="secondary" className="text-[10px]">
-                        INACTIVO
-                      </Badge>
-                    )}
-                    {m.esObligatorio ? (
-                      <Badge variant="default" className="text-[10px]">
-                        OBLIGATORIO
-                      </Badge>
-                    ) : (
-                      <Badge variant="outline" className="text-[10px]">
-                        OPCIONAL
-                      </Badge>
-                    )}
+                  <h2 className="text-lg font-bold text-gray-800">Requisitos y Criterios</h2>
+                </div>
+                
+                <div className="flex items-center gap-2">
+                  <Button variant="outline" size="sm" className="bg-white" onClick={() => openEdit(selectedMarco)}>
+                    <Pencil className="h-4 w-4 mr-2" /> Editar
+                  </Button>
+                  <Button variant="outline" size="sm" className="text-destructive bg-white hover:bg-destructive/5" onClick={() => setDeleteTarget(selectedMarco)}>
+                    <Trash2 className="h-4 w-4 mr-2" /> Eliminar
+                  </Button>
+                  <div className="h-6 w-[1px] bg-gray-300 mx-1 hidden md:block" />
+                  <Button size="sm" className="bg-white text-black border shadow-sm hover:bg-gray-50">
+                    <Plus className="h-4 w-4 mr-2" /> Agregar Cláusula
+                  </Button>
+                </div>
+              </div>
+
+              {/* Cuerpo del detalle */}
+              <div className="p-8 space-y-10 flex-1 bg-white">
+                {/* Ejemplo de Seccion 8 (Operación) */}
+                <div className="space-y-6">
+                  <div className="flex items-center gap-4">
+                    <span className="flex items-center justify-center w-8 h-8 rounded-lg bg-blue-600 text-white text-sm font-bold shadow-blue-200 shadow-lg">
+                      8
+                    </span>
+                    <h3 className="text-xl font-bold text-gray-900 tracking-tight">Operación</h3>
+                  </div>
+
+                  <div className="ml-12 relative">
+                    <div className="absolute left-[-26px] top-0 bottom-0 w-[2px] bg-gray-100" />
+                    
+                    <div className="bg-white border border-gray-200 rounded-xl p-6 shadow-sm hover:shadow-md transition-shadow">
+                      <div className="flex justify-between items-start gap-4">
+                        <div className="space-y-4">
+                          <p className="text-base font-semibold text-blue-700">
+                            8.3 Diseño y desarrollo de los productos y servicios
+                          </p>
+                          
+                          <div className="space-y-3">
+                            <span className="text-[10px] font-bold uppercase tracking-widest text-gray-400">
+                              Criterios de cumplimiento:
+                            </span>
+                            <ul className="grid gap-2">
+                              {["Planificación del diseño", "Controles del diseño"].map((item, idx) => (
+                                <li key={idx} className="flex items-center gap-3 text-sm text-gray-600">
+                                  <div className="h-1.5 w-1.5 rounded-full bg-blue-400" />
+                                  {item}
+                                </li>
+                              ))}
+                            </ul>
+                          </div>
+                        </div>
+                        <Badge variant="outline" className="bg-orange-50 text-orange-600 border-orange-200 text-[10px] font-bold px-3 py-1">
+                          AUDITABLE
+                        </Badge>
+                      </div>
+                    </div>
                   </div>
                 </div>
-                <div className="space-y-1">
-                  <p className="text-xs font-mono text-muted-foreground">{m.codigo}</p>
-                  <p className="text-xs text-muted-foreground">Tipo: {m.tipo}</p>
-                  <div className="flex items-center gap-1 text-xs text-muted-foreground">
-                    <Calendar className="h-3 w-3" />
-                    <span>Vigencia: {new Date(m.fechaVigencia).toLocaleDateString("es-ES")}</span>
+
+                {/* Info adicional del Marco */}
+                <div className="pt-8 border-t grid grid-cols-1 md:grid-cols-3 gap-6">
+                  <div className="space-y-1">
+                    <Label className="text-[10px] uppercase font-bold text-muted-foreground">Tipo de Marco</Label>
+                    <p className="text-sm font-medium">{selectedMarco.tipo}</p>
                   </div>
-                  {m.version && (
-                    <p className="text-xs text-muted-foreground">Versión: {m.version}</p>
+                  <div className="space-y-1">
+                    <Label className="text-[10px] uppercase font-bold text-muted-foreground">Fecha Vigencia</Label>
+                    <div className="flex items-center gap-2 text-sm font-medium">
+                      <Calendar className="h-4 w-4 text-blue-500" />
+                      {new Date(selectedMarco.fechaVigencia).toLocaleDateString("es-ES")}
+                    </div>
+                  </div>
+                  <div className="space-y-1">
+                    <Label className="text-[10px] uppercase font-bold text-muted-foreground">Versión Actual</Label>
+                    <Badge variant="secondary">{selectedMarco.version || "Sin versión"}</Badge>
+                  </div>
+                  {selectedMarco.descripcion && (
+                    <div className="col-span-full space-y-1 bg-gray-50 p-4 rounded-lg">
+                      <div className="flex items-center gap-2 mb-1">
+                        <Info className="h-3 w-3 text-gray-400" />
+                        <Label className="text-[10px] uppercase font-bold text-muted-foreground">Descripción</Label>
+                      </div>
+                      <p className="text-sm text-gray-600 leading-relaxed">{selectedMarco.descripcion}</p>
+                    </div>
                   )}
                 </div>
-                {m.descripcion && (
-                  <p className="text-xs text-muted-foreground line-clamp-2">{m.descripcion}</p>
-                )}
-                <div className="flex gap-1 pt-1">
-                  <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => openEdit(m)}>
-                    <Pencil className="h-3.5 w-3.5" />
-                  </Button>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="h-7 w-7 text-destructive"
-                    onClick={() => setDeleteTarget(m)}
-                  >
-                    <Trash2 className="h-3.5 w-3.5" />
-                  </Button>
-                </div>
-              </CardContent>
+              </div>
             </Card>
-          ))}
+          ) : (
+            <Card className="h-[600px] flex flex-col items-center justify-center border-dashed border-2">
+              <div className="bg-gray-50 p-6 rounded-full mb-4">
+                <FileText className="h-12 w-12 text-gray-300" />
+              </div>
+              <p className="text-muted-foreground font-medium">Selecciona un marco normativo de la lista</p>
+            </Card>
+          )}
         </div>
-      )}
+      </div>
 
-      <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-        <DialogContent className="w-[calc(100%-2rem)] max-w-md max-h-[90vh] overflow-y-auto sm:max-h-[85vh]">
-          <DialogHeader>
-            <DialogTitle>{editMarco ? "Editar marco normativo" : "Nuevo marco normativo"}</DialogTitle>
-          </DialogHeader>
-          <div className="space-y-4">
-            {!editMarco && (
-              <div className="space-y-2">
-                <Label>Código *</Label>
-                <Input
-                  value={form.codigo}
-                  onChange={(e) => setForm({ ...form, codigo: e.target.value })}
-                  placeholder="Ej: ISO-9001"
-                />
-              </div>
-            )}
-            <div className="space-y-2">
-              <Label>Nombre *</Label>
-              <Input
-                value={form.nombre}
-                onChange={(e) => setForm({ ...form, nombre: e.target.value })}
-                placeholder="Ej: ISO 9001:2015"
-              />
-            </div>
-            <div className="space-y-2">
-              <Label>Tipo *</Label>
-              <Input
-                value={form.tipo}
-                onChange={(e) => setForm({ ...form, tipo: e.target.value })}
-                placeholder="Ej: Norma Internacional"
-              />
-            </div>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label>Fecha de Vigencia *</Label>
-                <Input
-                  type="date"
-                  value={form.fechaVigencia}
-                  onChange={(e) => setForm({ ...form, fechaVigencia: e.target.value })}
-                />
-              </div>
-              <div className="space-y-2">
-                <Label>Versión</Label>
-                <Input
-                  value={form.version}
-                  onChange={(e) => setForm({ ...form, version: e.target.value })}
-                  placeholder="Ej: 1.0"
-                />
-              </div>
-            </div>
-            <div className="space-y-2">
-              <div className="flex items-center gap-2">
-                <Switch
-                  id="esObligatorio"
-                  checked={form.esObligatorio}
-                  onCheckedChange={(checked) => setForm({ ...form, esObligatorio: checked })}
-                />
-                <Label htmlFor="esObligatorio" className="text-sm">
-                  Es obligatorio
-                </Label>
-              </div>
-            </div>
-            <div className="space-y-2">
-              <Label>Descripción</Label>
-              <Input
-                value={form.descripcion}
-                onChange={(e) => setForm({ ...form, descripcion: e.target.value })}
-                placeholder="Descripción del marco normativo..."
-              />
-            </div>
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setDialogOpen(false)}>
-              Cancelar
-            </Button>
-            <Button onClick={handleSave} disabled={saving}>
-              {saving ? "Guardando..." : "Guardar"}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      {/* MODALES MODULARES */}
+      <MarcoNormativoForm 
+        open={dialogOpen}
+        onOpenChange={setDialogOpen}
+        onSubmit={handleSaveSubmit}
+        initialData={editMarco}
+        saving={saving}
+      />
 
       <AlertDialog open={!!deleteTarget} onOpenChange={(open) => !open && setDeleteTarget(null)}>
-        <AlertDialogContent>
+        <AlertDialogContent className="rounded-xl">
           <AlertDialogHeader>
-            <AlertDialogTitle>¿Eliminar marco normativo?</AlertDialogTitle>
+            <AlertDialogTitle>¿Confirmar eliminación?</AlertDialogTitle>
             <AlertDialogDescription>
-              Esta acción eliminará permanentemente el marco normativo "{deleteTarget?.nombre}". Esta acción no se puede deshacer.
+              El marco normativo <span className="font-bold text-foreground">"{deleteTarget?.nombre}"</span> será borrado permanentemente.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>Cancelar</AlertDialogCancel>
-            <AlertDialogAction onClick={handleDelete} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
-              Eliminar
+            <AlertDialogCancel className="rounded-lg">Volver</AlertDialogCancel>
+            <AlertDialogAction onClick={handleDelete} className="bg-destructive text-destructive-foreground hover:bg-destructive/90 rounded-lg">
+              Sí, eliminar
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

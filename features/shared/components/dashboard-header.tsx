@@ -31,7 +31,10 @@ function getBreadcrumbs(pathname: string): { label: string; href?: string }[] {
     } else if (pathname.includes("/cumplimiento")) {
       crumbs.push({ label: "Cumplimiento" });
     }
-  } else {
+  } else if (pathname.startsWith("/auditoria")) {
+    crumbs.push({ label: "Auditoría" });
+  } 
+    else {
     crumbs.push({ label: pathname.split("/")[1] || "Página" });
   }
   

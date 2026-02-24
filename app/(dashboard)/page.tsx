@@ -10,7 +10,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Users, BriefcaseBusiness } from "lucide-react";
+import { Users, BriefcaseBusiness, FileSearch } from "lucide-react";
 
 export default function DashboardPage() {
   const user = useAuthStore((s) => s.user);
@@ -26,6 +26,11 @@ export default function DashboardPage() {
       description: "Configurar identidad institucional, sedes y estructura organizacional",
       href: "/organizacion",
       icon: BriefcaseBusiness,
+    },{
+      title: "Auditoría",
+      description: "Configurar identidad institucional, sedes y estructura organizacional",
+      href: "/auditoria",
+      icon: FileSearch,
     }
   ];
 
@@ -51,7 +56,7 @@ export default function DashboardPage() {
             >
               <CardHeader className="pb-2">
                 <div className="flex items-center gap-3">
-                  <div className="flex size-10 items-center justify-center rounded-lg bg-primary/10 text-primary">
+                  <div className="flex size-10 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary">
                     <Icon className="size-5" />
                   </div>
                   <div>
