@@ -54,7 +54,7 @@ jobs:
           name: node-app
 
       - name: Unzip artifact for deployment
-        run: unzip node-app.zip -d release && mv release/.next/standalone ./app
+        run: unzip node-app.zip -d release && mv release/.next/standalone .
 
       - name: Login to Azure
         uses: azure/login@v2
@@ -69,6 +69,5 @@ jobs:
         with:
           app-name: 'qualitas'
           slot-name: 'Production'
-          package: ./app
-          startup-command: 'node server.js'
+          package: .
           
