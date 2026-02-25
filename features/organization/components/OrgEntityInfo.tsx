@@ -85,7 +85,7 @@ export function OrgEntityInfo({ orgId }: Props) {
       </div>
     );
   }
-  if (!org) return <div className="py-10 text-center text-muted-foreground">Error al cargar organizaci?n</div>;
+  if (!org) return <div className="py-10 text-center text-muted-foreground">Error al cargar organización</div>;
 
   const Field = ({ label, value, icon: Icon }: { label: string; value: string | null | undefined; icon?: React.ElementType }) => (
     <div>
@@ -117,10 +117,10 @@ export function OrgEntityInfo({ orgId }: Props) {
       <div className="flex items-center justify-between">
         <div>
           <h2 className="text-lg font-semibold">Identidad Institucional</h2>
-          <p className="text-sm text-muted-foreground">Informaci?n general de la entidad para reportes y encabezados.</p>
+          <p className="text-sm text-muted-foreground">Información general de la entidad para reportes y encabezados.</p>
         </div>
         <Button variant="outline" size="sm" onClick={() => setEditOpen(true)}>
-          <Pencil className="h-3.5 w-3.5 mr-1" /> Editar Informaci?n
+          <Pencil className="h-3.5 w-3.5 mr-1" /> Editar Información
         </Button>
       </div>
 
@@ -165,29 +165,29 @@ export function OrgEntityInfo({ orgId }: Props) {
               <dl className="space-y-3">
                 <Field label="Nombre de la Entidad" value={org.name} />
                 <div className="grid grid-cols-2 gap-4">
-                  <Field label="NIT / Identificaci?n" value={org.nit} />
+                  <Field label="NIT / Identificación" value={org.nit} />
                   <Field label="Sector" value={org.sector} />
                 </div>
                 <Field label="Slogan / Lema" value={org.slogan} icon={MessageSquareQuote} />
-                <Field label="Descripci?n / Misi?n Breve" value={org.description} icon={FileText} />
+                <Field label="Descripción / Misión Breve" value={org.description} icon={FileText} />
                 <Field label="Representante Legal" value={org.legal_representative} icon={User} />
               </dl>
             </CardContent>
           </Card>
 
-          {/* Informaci?n de Contacto */}
+          {/* Información de Contacto */}
           <Card>
             <CardHeader>
               <CardTitle className="text-base flex items-center gap-2">
                 <Mail className="h-4 w-4 text-primary" />
-                Informaci?n de Contacto
+                Información de Contacto
               </CardTitle>
             </CardHeader>
             <CardContent>
               <dl className="space-y-3">
                 <div className="grid grid-cols-2 gap-4">
-                  <Field label="Correo Electr?nico" value={org.email} icon={Mail} />
-                  <Field label="Tel?fono PBX" value={org.phone} icon={Phone} />
+                  <Field label="Correo Electrónico" value={org.email} icon={Mail} />
+                  <Field label="Teléfono PBX" value={org.phone} icon={Phone} />
                 </div>
                 <Field label="Sitio Web Oficial" value={org.website} icon={Globe} />
               </dl>

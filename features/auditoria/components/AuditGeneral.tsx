@@ -1,48 +1,19 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
-import { 
-  auditService, 
-  AuditSummaryDto, 
-  AuditItemDto 
-} from "@/features/auditoria/services/auditoria.service";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Clock, ArrowRight } from "lucide-react";
+import { Skeleton } from "@/components/ui/skeleton";
+import { Clock } from "lucide-react";
 import { cn } from "@/lib/utils";
-
-// 1. Definimos que este componente recibe la función para cambiar de pestaña
-interface AuditGeneralProps {
-  onSetActiveTab: (tab: string) => void;
-}
+import { useAuditSummaryQuery, useAuditsQuery } from "@/features/auditoria/hooks/use-auditoria-query";
 
 export function AuditGeneral() {
-  const [summary, setSummary] = useState<AuditSummaryDto | null>(null);
-  const [recentLogs, setRecentLogs] = useState<AuditItemDto[]>([]);
-  const [loading, setLoading] = useState(true);
-
-  const fetchData = useCallback(async () => {
-    setLoading(true);
-    try {
-      const [summaryData, logsData] = await Promise.all([
-        auditService.getAuditSummary(),
-        // ANTES: auditService.getAudits(1, 3) -> ESTO DABA ERROR
-        // AHORA: Enviamos el objeto esperado por el nuevo Service
-        auditService.getAudits({ PageNumber: 1, PageSize: 3 }), 
-      ]);
-
-      if (summaryData) setSummary(summaryData);
-      if (logsData) setRecentLogs(logsData.items);
-    } catch (error) {
-      console.error("Error cargando resumen:", error);
-    } finally {
-      setLoading(false);
-    }
-  }, []);
-
-  useEffect(() => {
-    fetchData();
-  }, [fetchData]);
+  const { data: summary } = useAuditSummaryQuery();
+  const { data: logsResponse, isPending: logsPending } = useAuditsQuery({
+    PageNumber: 1,
+    PageSize: 3,
+  });
+  const recentLogs = logsResponse?.items ?? [];
 
   return (
     <div className="space-y-6">
@@ -115,6 +86,13 @@ export function AuditGeneral() {
           </CardTitle>
         </CardHeader>
         <CardContent>
+          {logsPending ? (
+            <div className="space-y-2">
+              {[1, 2, 3].map((i) => (
+                <Skeleton key={i} className="h-12 w-full rounded-md" />
+              ))}
+            </div>
+          ) : (
           <div className="divide-y  divide-slate-100">
             {recentLogs.map((log) => (
               <div key={log.id} className="py-1 flex items-center justify-between group hover:bg-slate-50/50 transition-colors px-2 rounded-md">
@@ -136,6 +114,7 @@ export function AuditGeneral() {
               </div>
             ))}
           </div>
+          )}
         </CardContent>
       </Card>
     </div>

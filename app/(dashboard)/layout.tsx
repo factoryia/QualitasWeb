@@ -1,10 +1,13 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { AuthGuard } from "@/features/auth/components/shared/auth-guard";
 import { DashboardSidebar } from "../../features/shared/components/dashboard-sidebar";
 import { DashboardHeader } from "../../features/shared/components/dashboard-header";
 import { TooltipProvider } from "@/components/ui/tooltip";
+
+const queryClient = new QueryClient();
 
 export default function DashboardLayout({
   children,
@@ -23,9 +26,10 @@ export default function DashboardLayout({
   }
 
   return (
-    <AuthGuard>
-      <TooltipProvider>
-        <div className="flex h-screen w-full overflow-hidden bg-background">
+    <QueryClientProvider client={queryClient}>
+      <AuthGuard>
+        <TooltipProvider>
+          <div className="flex h-screen w-full overflow-hidden bg-background">
           {/* Mobile overlay */}
           {mobileOpen && (
             <div
@@ -43,7 +47,8 @@ export default function DashboardLayout({
             <main className="flex-1 overflow-auto p-6 md:p-8">{children}</main>
           </div>
         </div>
-      </TooltipProvider>
-    </AuthGuard>
+        </TooltipProvider>
+      </AuthGuard>
+    </QueryClientProvider>
   );
 }

@@ -46,10 +46,10 @@ type SidebarItem = {
   subItems?: Array<{ href: string; label: string; icon: React.ElementType }>;
 };
 
-// Enlaces siempre visibles para usuarios autenticados. Las acciones dentro de cada página (crear, editar, eliminar) siguen protegidas por permisos.
+// Jerarquía: título = padre, items = hijos. Coincide con breadcrumb (Inicio > Padre > Hijo).
 const SIDEBAR_SECTIONS: Array<{ title: string; items: SidebarItem[] }> = [
   {
-    title: "HOME",
+    title: "Inicio",
     items: [
       {
         href: "/",
@@ -60,7 +60,7 @@ const SIDEBAR_SECTIONS: Array<{ title: string; items: SidebarItem[] }> = [
     ],
   },
   {
-    title: "ADMINISTRACIÓN",
+    title: "Administración",
     items: [
       { href: "/usuarios", label: "Usuarios", icon: Users, permission: null },
       {
@@ -72,18 +72,12 @@ const SIDEBAR_SECTIONS: Array<{ title: string; items: SidebarItem[] }> = [
     ],
   },
   {
-    title: "NORMATIVIDAD",
+    title: "Normatividad",
     items: [
       {
-        href: "/normatividad/marcos-normativos",
+        href: "/normatividad/marcos",
         label: "Marcos Normativos",
         icon: FileText,
-        permission: null,
-      },
-      {
-        href: "/normatividad/mipg",
-        label: "MIPG",
-        icon: Shield,
         permission: null,
       },
       {
@@ -95,13 +89,9 @@ const SIDEBAR_SECTIONS: Array<{ title: string; items: SidebarItem[] }> = [
     ],
   },
   {
-    title: "CONTROL",
+    title: "Control",
     items: [
-      { href: "/auditoria", 
-        label: "Auditoría", 
-        icon: Zap, 
-        permission: null 
-      },
+      { href: "/auditoria", label: "Auditoría", icon: Zap, permission: null },
     ],
   },
 ] as const;
@@ -162,20 +152,20 @@ export function DashboardSidebar({
       className={cn(
         "fixed md:relative z-50 h-full bg-card border-r border-border flex flex-col",
         "transition-all duration-300 ease-in-out",
-        collapsed ? "w-16 min-w-[64px]" : "w-64 min-w-[256px]",
+        collapsed ? "w-16 min-w-[56px]" : "w-56 min-w-[220px]",
         mobileOpen ? "translate-x-0" : "-translate-x-full md:translate-x-0",
       )}
     >
       {/* Logo */}
       <div className="h-14 flex items-center gap-3 px-4 border-b border-border shrink-0">
-        <div className="w-8 h-8 rounded-lg bg-primary flex items-center justify-center shadow-sm shrink-0">
-          <Zap className="h-[18px] w-[18px] text-primary-foreground" />
-        </div>
-        {!collapsed && (
-          <span className="text-base font-bold text-foreground tracking-tight whitespace-nowrap">
-            Qualitas
-          </span>
-        )}
+        <Image
+          src="/icon/logo.png"
+          alt="Qualitas|Nexus"
+          width={50}
+          height={ 10}
+          className="h-7 w-auto object-contain"
+          priority
+        />
       </div>
 
       {/* Nav */}
@@ -183,7 +173,7 @@ export function DashboardSidebar({
         {SIDEBAR_SECTIONS.map((section, gi) => (
           <div key={gi} className="mb-1">
             {section.title && !collapsed && (
-              <div className="text-[10.5px] font-semibold uppercase tracking-wider text-muted-foreground px-2 pt-4 pb-1.5">
+              <div className="text-[10.5px] font-semibold tracking-wider text-muted-foreground px-2 pt-4 pb-1.5">
                 {section.title}
               </div>
             )}

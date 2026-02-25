@@ -217,8 +217,10 @@ class ComplianceService {
   ): Promise<ClausulaRequisitoDto[]> {
     try {
       const authHeaders_ = authHeaders(auth ?? authFromStore());
-      const params: Record<string, string | boolean> = { includeInactive };
-      if (marcoNormativoId) params.marcoNormativoId = marcoNormativoId;
+      const params: Record<string, string | boolean> = {
+        IncludeInactive: includeInactive,
+        ...(marcoNormativoId && { MarcoNormativoId: marcoNormativoId }),
+      };
       const { data } = await api.get<ClausulaRequisitoDto[]>(`${BASE}/clausulas-requisitos`, {
         params,
         ...(authHeaders_ && { headers: authHeaders_ }),

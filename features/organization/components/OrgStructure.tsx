@@ -1,11 +1,17 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent } from "@/components/ui/card";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from "@/components/ui/dialog";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -16,141 +22,141 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Switch } from "@/components/ui/switch";
 import {
-  organizationService,
-  type OrganizationUnitDto,
-} from "../services/organization.service";
-import { Skeleton } from "@/components/ui/skeleton";
-import { Plus, Network, AlertTriangle, ChevronsDownUp, ChevronsUpDown } from "lucide-react";
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Switch } from "@/components/ui/switch";
 import toast from "react-hot-toast";
+import { Plus, Network, AlertTriangle, ChevronsDownUp, ChevronsUpDown, Loader2 } from "lucide-react";
+import { OrgStructureDrawer } from "./OrgStructureDrawer";
+import { OrgChartNode } from "./OrgChartNode";
+import type { Area, Sede } from "../types";
+import {
+  useAreas,
+  useSedes,
+  useMembers,
+  useAreaUserCounts,
+  useCreateArea,
+  useUpdateArea,
+  type OrgMember,
+} from "../hooks/use-organization-structure-query";
+
+/** En false: áreas se manejan con useState (quemado). En true: se usan endpoints de áreas. */
+const STRUCTURE_API_ENABLED = false;
 
 interface Props {
   orgId: string;
 }
 
-interface UnitForm {
+interface AreaForm {
   name: string;
   code: string;
-  parentId: string | null;
-  description: string;
-  isActive: boolean;
+  parent_id: string | null;
+  sede_id: string | null;
+  manager_id: string | null;
 }
 
-function buildUnitOptions(
-  units: OrganizationUnitDto[],
+function buildAreaOptions(
+  areas: Area[],
   excludeId?: string,
   parentId: string | null = null,
   depth = 0
 ): { id: string; label: string }[] {
   const result: { id: string; label: string }[] = [];
-  const children = units.filter(
-    (u) => u.parentId === parentId && u.id !== excludeId && u.isActive !== false
+  const children = areas.filter(
+    (a) => a.parent_id === parentId && a.id !== excludeId && a.is_active !== false
   );
   for (const child of children) {
     result.push({ id: child.id, label: `${"—".repeat(depth)} ${child.name}`.trim() });
-    result.push(...buildUnitOptions(units, excludeId, child.id, depth + 1));
+    result.push(...buildAreaOptions(areas, excludeId, child.id, depth + 1));
   }
   return result;
 }
 
-function UnitNode({
-  unit,
-  units,
-  showInactive,
-  onEdit,
-  onDelete,
-  depth = 0,
-}: {
-  unit: OrganizationUnitDto;
-  units: OrganizationUnitDto[];
-  showInactive: boolean;
-  onEdit: (u: OrganizationUnitDto) => void;
-  onDelete: (u: OrganizationUnitDto) => void;
-  depth?: number;
-}) {
-  const children = units.filter((u) => u.parentId === unit.id && (showInactive || u.isActive !== false));
-  return (
-    <div className={depth > 0 ? "ml-4 mt-2 border-l-2 border-muted pl-4" : ""}>
-      <div className="flex items-center justify-between gap-2 py-1.5 rounded-md hover:bg-muted/50">
-        <div className="min-w-0">
-          <span className="font-medium text-sm">{unit.name}</span>
-          {unit.code && (
-            <span className="ml-2 text-xs text-muted-foreground font-mono">{unit.code}</span>
-          )}
-          {unit.isActive === false && (
-            <span className="ml-2 text-[10px] text-muted-foreground">(inactiva)</span>
-          )}
-        </div>
-        <div className="flex gap-1 shrink-0">
-          <Button variant="ghost" size="sm" className="h-7" onClick={() => onEdit(unit)}>
-            Editar
-          </Button>
-          <Button variant="ghost" size="sm" className="h-7 text-destructive" onClick={() => onDelete(unit)}>
-            Eliminar
-          </Button>
-        </div>
-      </div>
-      {children.map((child) => (
-        <UnitNode
-          key={child.id}
-          unit={child}
-          units={units}
-          showInactive={showInactive}
-          onEdit={onEdit}
-          onDelete={onDelete}
-          depth={depth + 1}
-        />
-      ))}
-    </div>
-  );
+function createEmptyArea(overrides: Partial<Area> & { name: string; organization_id: string }): Area {
+  return {
+    id: crypto.randomUUID(),
+    name: overrides.name,
+    code: overrides.code ?? null,
+    parent_id: overrides.parent_id ?? null,
+    hierarchy_level: overrides.hierarchy_level ?? 1,
+    sede_id: overrides.sede_id ?? null,
+    manager_id: overrides.manager_id ?? null,
+    is_active: true,
+    organization_id: overrides.organization_id,
+  };
 }
 
+/** Sedes de ejemplo para el formulario cuando la estructura es 100% local (sin API). */
+function getLocalSedes(organizationId: string): Sede[] {
+  return [
+    { id: "local-sede-1", name: "Sede Principal", organization_id: organizationId, is_principal: true },
+    { id: "local-sede-2", name: "Sede Norte", organization_id: organizationId },
+    { id: "local-sede-3", name: "Sede Sur", organization_id: organizationId },
+  ];
+}
+
+/** Responsables/usuarios de ejemplo para el formulario cuando la estructura es 100% local (sin API). */
+const LOCAL_MEMBERS: OrgMember[] = [
+  { user_id: "local-user-1", full_name: "Juan Pérez" },
+  { user_id: "local-user-2", full_name: "María García" },
+  { user_id: "local-user-3", full_name: "Carlos López" },
+];
+
 export function OrgStructure({ orgId }: Props) {
-  const [units, setUnits] = useState<OrganizationUnitDto[]>([]);
+  const [localAreas, setLocalAreas] = useState<Area[]>([]);
+  const [localSedes] = useState<Sede[]>(() => getLocalSedes(orgId));
+  const [selectedArea, setSelectedArea] = useState<Area | null>(null);
   const [dialogOpen, setDialogOpen] = useState(false);
-  const [editUnit, setEditUnit] = useState<OrganizationUnitDto | null>(null);
-  const [form, setForm] = useState<UnitForm>({
+  const [editArea, setEditArea] = useState<Area | null>(null);
+  const [form, setForm] = useState<AreaForm>({
     name: "",
     code: "",
-    parentId: null,
-    description: "",
-    isActive: true,
+    parent_id: null,
+    sede_id: null,
+    manager_id: null,
   });
-  const [saving, setSaving] = useState(false);
   const [codeError, setCodeError] = useState("");
-  const [showInactive, setShowInactive] = useState(true);
-  const [allExpanded, setAllExpanded] = useState(true);
-  const [deleteTarget, setDeleteTarget] = useState<OrganizationUnitDto | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [showInactive, setShowInactive] = useState(false);
+  const [allExpanded, setAllExpanded] = useState(false);
+  const [deleteTarget, setDeleteTarget] = useState<Area | null>(null);
+  const [deleteInfo, setDeleteInfo] = useState<{ subAreas: number; users: number } | null>(null);
 
-  const fetchData = async () => {
-    setLoading(true);
-    const list = await organizationService.getAllOrganizationUnits(true);
-    setUnits(list);
-    setLoading(false);
-  };
+  const orgIdForAreas = STRUCTURE_API_ENABLED ? orgId : null;
+  const { data: apiAreas = [], isLoading: areasLoading } = useAreas(orgIdForAreas);
+  const { data: sedesFromApi = [] } = useSedes(STRUCTURE_API_ENABLED ? orgId : null);
+  const { data: membersFromApi = [] } = useMembers(STRUCTURE_API_ENABLED ? orgId : null);
+  const areas = STRUCTURE_API_ENABLED ? apiAreas : localAreas;
+  const sedes = STRUCTURE_API_ENABLED ? sedesFromApi : localSedes;
+  const members = STRUCTURE_API_ENABLED ? membersFromApi : LOCAL_MEMBERS;
+  const areaIds = areas.map((a) => a.id);
+  const { userCounts } = useAreaUserCounts(STRUCTURE_API_ENABLED ? areaIds : []);
 
-  useEffect(() => {
-    fetchData();
-  }, [orgId]);
+  const createAreaMutation = useCreateArea(orgIdForAreas);
+  const updateAreaMutation = useUpdateArea(orgIdForAreas);
 
-  const openAdd = (parentId: string | null) => {
-    setEditUnit(null);
-    setForm({ name: "", code: "", parentId, description: "", isActive: true });
+  const saving = STRUCTURE_API_ENABLED && (createAreaMutation.isPending || updateAreaMutation.isPending);
+  const loading = STRUCTURE_API_ENABLED && areasLoading;
+
+  const openAdd = (pId: string | null) => {
+    setEditArea(null);
+    setForm({ name: "", code: "", parent_id: pId, sede_id: null, manager_id: null });
     setCodeError("");
     setDialogOpen(true);
   };
 
-  const openEdit = (u: OrganizationUnitDto) => {
-    setEditUnit(u);
+  const openEdit = (a: Area) => {
+    setEditArea(a);
     setForm({
-      name: u.name,
-      code: u.code,
-      parentId: u.parentId,
-      description: u.description ?? "",
-      isActive: u.isActive ?? true,
+      name: a.name,
+      code: a.code ?? "",
+      parent_id: a.parent_id ?? null,
+      sede_id: a.sede_id ?? null,
+      manager_id: a.manager_id ?? null,
     });
     setCodeError("");
     setDialogOpen(true);
@@ -161,7 +167,7 @@ export function OrgStructure({ orgId }: Props) {
       setCodeError("");
       return true;
     }
-    const existing = units.find((u) => u.code === code.trim() && u.id !== currentId);
+    const existing = areas.find((a) => a.code === code.trim() && a.id !== currentId);
     if (existing) {
       setCodeError("Este código ya está en uso");
       return false;
@@ -175,59 +181,114 @@ export function OrgStructure({ orgId }: Props) {
       toast.error("Nombre requerido");
       return;
     }
-    if (!form.code.trim()) {
-      toast.error("Código requerido");
+    const codeValid = validateCode(form.code, editArea?.id);
+    if (!codeValid) return;
+
+    if (STRUCTURE_API_ENABLED) {
+      if (editArea) {
+        const success = await updateAreaMutation.mutateAsync({
+          areaId: editArea.id,
+          data: {
+            name: form.name,
+            code: form.code || undefined,
+            parent_id: form.parent_id ?? undefined,
+            sede_id: form.sede_id ?? undefined,
+            manager_id: form.manager_id ?? undefined,
+          },
+        });
+        if (success) setDialogOpen(false);
+      } else {
+        const parentArea = form.parent_id ? areas.find((a) => a.id === form.parent_id) : null;
+        const hierarchy_level = parentArea ? (parentArea.hierarchy_level ?? 1) + 1 : 1;
+        const created = await createAreaMutation.mutateAsync({
+          name: form.name,
+          code: form.code || undefined,
+          parent_id: form.parent_id ?? undefined,
+          hierarchy_level,
+          sede_id: form.sede_id ?? undefined,
+          manager_id: form.manager_id ?? undefined,
+          organization_id: orgId,
+        });
+        if (created) setDialogOpen(false);
+      }
       return;
     }
-    if (!validateCode(form.code, editUnit?.id)) return;
-    setSaving(true);
-    if (editUnit) {
-      const success = await organizationService.updateOrganizationUnitById(editUnit.id, {
-        code: form.code,
-        name: form.name,
-        description: form.description || null,
-        isActive: form.isActive,
-        parentId: form.parentId,
-      });
-      if (success) {
-        setDialogOpen(false);
-        fetchData();
-      }
+
+    if (editArea) {
+      setLocalAreas((prev) =>
+        prev.map((a) =>
+          a.id === editArea.id
+            ? {
+                ...a,
+                name: form.name,
+                code: form.code || null,
+                parent_id: form.parent_id,
+                sede_id: form.sede_id,
+                manager_id: form.manager_id,
+              }
+            : a
+        )
+      );
+      toast.success("Área actualizada");
     } else {
-      const created = await organizationService.createOrganizationUnit({
-        organizationId: orgId,
+      const parentArea = form.parent_id ? areas.find((a) => a.id === form.parent_id) : null;
+      const hierarchy_level = parentArea ? (parentArea.hierarchy_level ?? 1) + 1 : 1;
+      const newArea = createEmptyArea({
         name: form.name,
-        code: form.code,
-        description: form.description || null,
-        parentId: form.parentId,
+        code: form.code || null,
+        parent_id: form.parent_id,
+        hierarchy_level,
+        sede_id: form.sede_id,
+        manager_id: form.manager_id,
+        organization_id: orgId,
       });
-      if (created) {
-        setDialogOpen(false);
-        fetchData();
-      }
+      setLocalAreas((prev) => [...prev, newArea]);
+      toast.success("Área creada");
     }
-    setSaving(false);
+    setDialogOpen(false);
+  };
+
+  const confirmDelete = (area: Area) => {
+    const subAreas = areas.filter(
+      (a) => a.parent_id === area.id && a.is_active !== false
+    ).length;
+    const users = userCounts[area.id] ?? 0;
+    setDeleteInfo({ subAreas, users });
+    setDeleteTarget(area);
   };
 
   const handleDelete = async () => {
     if (!deleteTarget) return;
-    const success = await organizationService.deleteOrganizationUnit(deleteTarget.id);
-    if (success) {
+    if (STRUCTURE_API_ENABLED) {
+      const success = await updateAreaMutation.mutateAsync({
+        areaId: deleteTarget.id,
+        data: { is_active: false },
+      });
+      if (success) {
+        setDeleteTarget(null);
+        setDeleteInfo(null);
+      }
+    } else {
+      setLocalAreas((prev) =>
+        prev.map((a) => (a.id === deleteTarget.id ? { ...a, is_active: false } : a))
+      );
+      toast.success("Área desactivada");
       setDeleteTarget(null);
-      fetchData();
+      setDeleteInfo(null);
     }
   };
 
-  const displayUnits = showInactive ? units : units.filter((u) => u.isActive !== false);
-  const rootUnits = displayUnits.filter((u) => !u.parentId);
-  const unitOptions = buildUnitOptions(units, editUnit?.id);
+  const displayAreas = showInactive ? areas : areas.filter((a) => a.is_active !== false);
+  const rootAreas = displayAreas.filter((a) => !a.parent_id);
+  const areaOptions = buildAreaOptions(areas, editArea?.id);
 
   return (
     <div className="space-y-6 pt-4">
+      {/* Header */}
       <div className="flex items-center justify-between flex-wrap gap-2">
         <div>
-          <h3 className="text-lg font-semibold">Estructura organizacional</h3>
-          <p className="text-xs text-muted-foreground">Unidades por jerarquía (parentId)</p>
+          <h3 className="text-lg font-semibold">Organigrama Institucional</h3>
+          <p className="text-xs text-muted-foreground">Visualización jerárquica de dependencias</p>
         </div>
         <div className="flex items-center gap-2">
           <Button variant="outline" size="sm" onClick={() => setAllExpanded(!allExpanded)}>
@@ -236,101 +297,91 @@ export function OrgStructure({ orgId }: Props) {
           </Button>
           <div className="flex items-center gap-2">
             <Switch checked={showInactive} onCheckedChange={setShowInactive} id="show-inactive" />
-            <Label htmlFor="show-inactive" className="text-xs text-muted-foreground">
-              Incluir inactivas
-            </Label>
+            <Label htmlFor="show-inactive" className="text-xs text-muted-foreground">Inactivas</Label>
           </div>
           <Button size="sm" onClick={() => openAdd(null)}>
-            <Plus className="h-4 w-4 mr-1" /> Nueva unidad
+            <Plus className="h-4 w-4 mr-1" /> Agregar Dependencia
           </Button>
         </div>
       </div>
 
+      {/* Chart */}
       {loading ? (
         <Card>
-          <CardContent className="pt-4 space-y-4">
-            <div className="flex items-center gap-2 py-1.5">
-              <Skeleton className="h-4 w-4 rounded" />
-              <Skeleton className="h-4 w-40" />
-            </div>
-            <div className="ml-4 border-l-2 border-muted pl-4 space-y-3">
-              <div className="flex items-center gap-2 py-1.5">
-                <Skeleton className="h-4 w-4 rounded" />
-                <Skeleton className="h-4 w-36" />
-              </div>
-              <div className="ml-4 border-l-2 border-muted pl-4 space-y-2">
-                <div className="flex items-center gap-2 py-1.5">
-                  <Skeleton className="h-3 w-28" />
-                </div>
-                <div className="flex items-center gap-2 py-1.5">
-                  <Skeleton className="h-3 w-32" />
-                </div>
-              </div>
-              <div className="flex items-center gap-2 py-1.5">
-                <Skeleton className="h-4 w-4 rounded" />
-                <Skeleton className="h-4 w-24" />
-              </div>
-            </div>
+          <CardContent className="py-12 text-center text-muted-foreground">
+            <Loader2 className="mx-auto mb-2 h-8 w-8 animate-spin opacity-40" />
+            <p>Cargando organigrama...</p>
           </CardContent>
         </Card>
-      ) : displayUnits.length === 0 ? (
+      ) : displayAreas.length === 0 ? (
         <Card>
           <CardContent className="py-12 text-center text-muted-foreground">
             <Network className="mx-auto mb-2 h-8 w-8 opacity-40" />
-            <p>No hay unidades organizativas. Crea una desde la pestaña Sedes o aquí.</p>
+            <p>No hay áreas creadas aún.</p>
           </CardContent>
         </Card>
       ) : (
-        <Card>
-          <CardContent className="pt-4">
-            {rootUnits.map((unit) => (
-              <UnitNode
-                key={unit.id}
-                unit={unit}
-                units={displayUnits}
-                showInactive={showInactive}
+        <div className="overflow-x-auto pb-8">
+          <div className="flex justify-center gap-8 min-w-max px-4">
+            {rootAreas.map((area) => (
+              <OrgChartNode
+                key={area.id}
+                area={area}
+                allAreas={displayAreas}
+                members={members}
+                userCounts={userCounts}
+                isRoot
+                allExpanded={allExpanded}
+                onSelect={setSelectedArea}
+                onAddChild={openAdd}
                 onEdit={openEdit}
-                onDelete={setDeleteTarget}
+                onDelete={confirmDelete}
               />
             ))}
-          </CardContent>
-        </Card>
+          </div>
+        </div>
       )}
 
+      <OrgStructureDrawer area={selectedArea} orgId={orgId} sedes={sedes} members={members} onClose={() => setSelectedArea(null)} />
+
+      {/* Create/Edit Dialog */}
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-        <DialogContent className="sm:max-w-md rounded-lg">
-          <DialogHeader>
-            <DialogTitle>{editUnit ? "Editar unidad" : "Nueva unidad"}</DialogTitle>
-          </DialogHeader>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader><DialogTitle>{editArea ? "Editar Área" : "Nueva Área"}</DialogTitle></DialogHeader>
           <div className="space-y-4">
             <div className="space-y-2">
               <Label>Nombre *</Label>
-              <Input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} />
+              <Input
+                value={form.name}
+                onChange={(e) => setForm({ ...form, name: e.target.value })}
+              />
             </div>
             <div className="space-y-2">
-              <Label>Código *</Label>
+              <Label>Código</Label>
               <Input
                 value={form.code}
                 onChange={(e) => {
                   setForm({ ...form, code: e.target.value });
                   setCodeError("");
                 }}
-                placeholder="ej. DIR-01"
+                placeholder="DIR-01"
               />
               {codeError && <p className="text-sm text-destructive">{codeError}</p>}
             </div>
             <div className="space-y-2">
               <Label>Depende de</Label>
               <Select
-                value={form.parentId ?? "__none__"}
-                onValueChange={(v) => setForm({ ...form, parentId: v === "__none__" ? null : v })}
+                value={form.parent_id ?? "__none__"}
+                onValueChange={(v) =>
+                  setForm({ ...form, parent_id: v === "__none__" ? null : v })
+                }
               >
                 <SelectTrigger>
-                  <SelectValue placeholder="Raíz (sin padre)" />
+                  <SelectValue placeholder="Área raíz (sin padre)" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="__none__">— Raíz (sin padre) —</SelectItem>
-                  {unitOptions.map((opt) => (
+                  <SelectItem value="__none__">— Área raíz (sin padre) —</SelectItem>
+                  {areaOptions.map((opt) => (
                     <SelectItem key={opt.id} value={opt.id}>
                       {opt.label}
                     </SelectItem>
@@ -339,45 +390,74 @@ export function OrgStructure({ orgId }: Props) {
               </Select>
             </div>
             <div className="space-y-2">
-              <Label>Descripción</Label>
-              <Input
-                value={form.description}
-                onChange={(e) => setForm({ ...form, description: e.target.value })}
-                placeholder="Opcional"
-              />
+              <Label>Sede</Label>
+              <Select
+                value={form.sede_id ?? "__none__"}
+                onValueChange={(v) =>
+                  setForm({ ...form, sede_id: v === "__none__" ? null : v })
+                }
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Sin sede asignada" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="__none__">— Sin sede —</SelectItem>
+                  {sedes.map((s) => (
+                    <SelectItem key={s.id} value={s.id}>
+                      {s.name}
+                      {s.is_principal ? " (Principal)" : ""}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
-            {editUnit && (
-              <div className="flex items-center justify-between">
-                <Label htmlFor="is_active" className="text-sm">
-                  Activa
-                </Label>
-                <Switch
-                  id="is_active"
-                  checked={form.isActive}
-                  onCheckedChange={(v) => setForm({ ...form, isActive: v })}
-                />
-              </div>
-            )}
+            <div className="space-y-2">
+              <Label>Responsable</Label>
+              <Select
+                value={form.manager_id ?? "__none__"}
+                onValueChange={(v) =>
+                  setForm({ ...form, manager_id: v === "__none__" ? null : v })
+                }
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Sin responsable" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="__none__">— Sin responsable —</SelectItem>
+                  {members.map((m) => (
+                    <SelectItem key={m.user_id} value={m.user_id}>
+                      {m.full_name || "Sin nombre"}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setDialogOpen(false)}>
-              Cancelar
-            </Button>
+            <Button variant="outline" onClick={() => setDialogOpen(false)}>Cancelar</Button>
             <Button onClick={handleSave} disabled={saving}>
-              {saving ? "Guardando..." : editUnit ? "Guardar" : "Crear"}
+              {saving ? "Guardando..." : editArea ? "Guardar" : "Agregar"}
             </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
 
-      <AlertDialog open={!!deleteTarget} onOpenChange={(open) => !open && setDeleteTarget(null)}>
+      {/* Delete Confirmation */}
+      <AlertDialog open={!!deleteTarget} onOpenChange={(open) => { if (!open) { setDeleteTarget(null); setDeleteInfo(null); } }}>
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle className="flex items-center gap-2">
-              <AlertTriangle className="h-5 w-5 text-destructive" /> Eliminar unidad
+              <AlertTriangle className="h-5 w-5 text-destructive" /> Desactivar área
             </AlertDialogTitle>
-            <AlertDialogDescription>
-              ¿Desea eliminar la unidad <strong>"{deleteTarget?.name}"</strong>? Esta acción no se puede deshacer.
+            <AlertDialogDescription className="space-y-2">
+              <span>¿Deseas desactivar el área <strong>"{deleteTarget?.name}"</strong>?</span>
+              {deleteInfo && (deleteInfo.subAreas > 0 || deleteInfo.users > 0) && (
+                <span className="block mt-2 text-destructive">
+                  ⚠️ Esta área tiene {deleteInfo.subAreas > 0 ? `${deleteInfo.subAreas} sub-área(s) activa(s)` : ""}
+                  {deleteInfo.subAreas > 0 && deleteInfo.users > 0 ? " y " : ""}
+                  {deleteInfo.users > 0 ? `${deleteInfo.users} usuario(s) vinculado(s)` : ""}.
+                </span>
+              )}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
@@ -386,7 +466,7 @@ export function OrgStructure({ orgId }: Props) {
               onClick={handleDelete}
               className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
             >
-              Eliminar
+              Desactivar
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

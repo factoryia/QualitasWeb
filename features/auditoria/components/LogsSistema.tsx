@@ -1,93 +1,61 @@
 "use client";
-import { useEffect, useState, useCallback } from "react";
-import { 
-  auditService, 
-  AuditItemDto, 
-  AuditDetailDto, 
-  AuditQueryParams 
+
+import { useEffect, useState, useMemo } from "react";
+import {
+  auditService,
+  type AuditDetailDto,
+  type AuditQueryParams,
 } from "@/features/auditoria/services/auditoria.service";
+import { useAuditsQuery } from "@/features/auditoria/hooks/use-auditoria-query";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Search, Calendar } from "lucide-react";
-import { 
-  Select, 
-  SelectContent, 
-  SelectItem, 
-  SelectTrigger, 
-  SelectValue 
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
 } from "@/components/ui/select";
-import { toast } from "react-hot-toast";
 import { LogDetailModal } from "./LogsDetailsModal";
 import { LogsTabla } from "./LogsTabla";
 
 export function SystemLogs() {
-  const [logs, setLogs] = useState<AuditItemDto[]>([]);
-  const [loading, setLoading] = useState(true);
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
-  const [totalCount, setTotalCount] = useState(0);
 
-  // --- NUEVOS ESTADOS DE BÚSQUEDA ---
   const [searchTerm, setSearchTerm] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
-  // Estado para saber qué campo del Query Parameter afectar (Search por defecto)
   const [searchField, setSearchField] = useState<keyof AuditQueryParams>("Search");
-  
-  // Estado para el filtro de severidad/tipo
   const [logTypeFilter, setlogTypeFilter] = useState("all");
 
-  // Debounce logic
   useEffect(() => {
-    const handler = setTimeout(() => {
-      setDebouncedSearch(searchTerm);
-    }, 600); // 600ms es un buen equilibrio
+    const handler = setTimeout(() => setDebouncedSearch(searchTerm), 600);
     return () => clearTimeout(handler);
   }, [searchTerm]);
 
-  // Estados para el detalle
   const [selectedLog, setSelectedLog] = useState<AuditDetailDto | null>(null);
   const [isDetailLoading, setIsDetailLoading] = useState(false);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
 
-  const fetchData = useCallback(async () => {
-    setLoading(true);
-    try {
-      // 1. Parámetros base
-      const queryParams: AuditQueryParams = {
-        PageNumber: page,
-        PageSize: pageSize,
-      };
-
-      // 2. Aplicamos la búsqueda al campo seleccionado
-      if (debouncedSearch.trim()) {
-        const term = debouncedSearch.trim();
-        // Usamos la llave dinámica elegida en el Select (Search, TraceId, CorrelationId, etc.)
-        queryParams[searchField] = term as any; 
-      }
-
-      // 3. Filtros predefinidos (Severity/EventType)
-      if (logTypeFilter === "security") {
-        queryParams.Severity = 3;
-      } else if (logTypeFilter === "exception") {
-        queryParams.Severity = 5;
-      }
-
-      const res = await auditService.getAudits(queryParams);
-      if (res) {
-        setLogs(res.items);
-        setTotalCount(res.totalCount);
-      }
-    } catch (error) {
-      console.error("Error en fetchData:", error);
-    } finally {
-      setLoading(false);
+  const queryParams = useMemo<AuditQueryParams>(() => {
+    const params: AuditQueryParams = {
+      PageNumber: page,
+      PageSize: pageSize,
+    };
+    if (debouncedSearch.trim()) {
+      params[searchField] = debouncedSearch.trim() as never;
     }
-  }, [page, pageSize, logTypeFilter, debouncedSearch, searchField]);
+    if (logTypeFilter === "security") params.Severity = 3;
+    else if (logTypeFilter === "exception") params.Severity = 5;
+    return params;
+  }, [page, pageSize, debouncedSearch, searchField, logTypeFilter]);
 
-  useEffect(() => {
-    fetchData();
-  }, [fetchData]);
+  const { data, isFetching, isPending } = useAuditsQuery(queryParams);
+  const logs = data?.items ?? [];
+  const totalCount = data?.totalCount ?? 0;
+  const loading = isFetching || isPending;
 
   // --- Handlers ---
   const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -137,7 +105,7 @@ export function SystemLogs() {
 
         <div className="flex items-center gap-2">
           {/* SELECT PARA ELEGIR CAMPO DE BÚSQUEDA */}
-          <Select value={searchField as string} onValueChange={(val) => setSearchField(val as any)}>
+          <Select value={searchField as string} onValueChange={(val) => { setSearchField(val as keyof AuditQueryParams); setPage(1); }}>
             <SelectTrigger className="w-[160px] bg-slate-50">
               <SelectValue placeholder="Campo" />
             </SelectTrigger>
@@ -151,7 +119,7 @@ export function SystemLogs() {
           </Select>
 
           {/* SELECT PARA FILTRO DE SEVERIDAD */}
-          <Select value={logTypeFilter} onValueChange={setlogTypeFilter}>
+          <Select value={logTypeFilter} onValueChange={(v) => { setlogTypeFilter(v); setPage(1); }}>
             <SelectTrigger className="w-[160px]">
               <SelectValue placeholder="Severidad" />
             </SelectTrigger>

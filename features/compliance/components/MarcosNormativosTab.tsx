@@ -1,20 +1,22 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Card, CardContent } from "@/components/ui/card";
+import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
-import { Switch } from "@/components/ui/switch";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
-import { complianceService, type MarcoNormativoDto } from "../services/compliance.service";
+import type { MarcoNormativoDto } from "../services/compliance.service";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Plus, Search, FileText, Pencil, Trash2, Calendar, ChevronRight, Settings2, ClipboardCheck, Info, ChevronLeft } from "lucide-react";
-import { cn } from "@/lib/utils";
-import toast from "react-hot-toast";
+import { Plus, FileText, Pencil, Trash2, Calendar, Settings2, Info } from "lucide-react";
 import { MarcoNormativoForm } from "@/features/compliance/components/MarcoNormativoForm";
 import { MarcoNormativoList } from "./MarcosNormativosList";
+import {
+  useMarcosNormativosQuery,
+  useMarcoNormativoCreateMutation,
+  useMarcoNormativoUpdateMutation,
+  useMarcoNormativoDeleteMutation,
+} from "../hooks/use-marcos-normativos-query";
 
 interface MarcoForm {
   codigo: string;
@@ -27,101 +29,80 @@ interface MarcoForm {
 }
 
 export function MarcosNormativosTab() {
-  const [marcos, setMarcos] = useState<MarcoNormativoDto[]>([]);
   const [selectedId, setSelectedId] = useState<string | null>(null);
-  const [search, setSearch] = useState("");
-  const [showInactive, setShowInactive] = useState(true);
-  const [loading, setLoading] = useState(true);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editMarco, setEditMarco] = useState<MarcoNormativoDto | null>(null);
-  
-  const [saving, setSaving] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState<MarcoNormativoDto | null>(null);
-  // Estados para paginación local
-  const [page, setPage] = useState(1);
-  const [pageSize, setPageSize] = useState(10);
 
-  const fetchData = async () => {
-    setLoading(true);
-    const list = await complianceService.getAllMarcosNormativos(true);
-    setMarcos(list);
-    if (list.length > 0 && !selectedId) {
-      setSelectedId(list[0].id);
+  const { data: marcos = [], isLoading } = useMarcosNormativosQuery(true);
+  const createMutation = useMarcoNormativoCreateMutation();
+  const updateMutation = useMarcoNormativoUpdateMutation();
+  const deleteMutation = useMarcoNormativoDeleteMutation();
+
+  useEffect(() => {
+    if (marcos.length > 0 && !selectedId) {
+      setSelectedId(marcos[0].id);
     }
-    setLoading(false);
-  };
-  const filteredFullList = marcos
-    .filter((m) => showInactive || m.isActive !== false)
-    .filter((m) =>
-      m.nombre.toLowerCase().includes(search.toLowerCase()) ||
-      m.codigo?.toLowerCase().includes(search.toLowerCase())
-  );
-  const totalCount = filteredFullList.length;
-  const totalPages = Math.ceil(totalCount / pageSize);
-  
-  const paginatedList = filteredFullList.slice(
-    (page - 1) * pageSize,
-    page * pageSize
-  );
+  }, [marcos, selectedId]);
 
-  // Resetear a la página 1 si cambia la búsqueda
-  useEffect(() => {
-    setPage(1);
-  }, [search, showInactive]);
-
-  useEffect(() => {
-    fetchData();
-  }, []);
-const openAdd = () => {
-    setEditMarco(null); // Indicamos que es uno nuevo
+  const openAdd = () => {
+    setEditMarco(null);
     setDialogOpen(true);
   };
 
   const openEdit = (m: MarcoNormativoDto) => {
-    setEditMarco(m); // Pasamos el objeto a editar
+    setEditMarco(m);
     setDialogOpen(true);
   };
 
   const handleSaveSubmit = async (formData: MarcoForm) => {
-    setSaving(true);
     const fechaVigenciaISO = new Date(formData.fechaVigencia + "T00:00:00Z").toISOString();
-    const payload = { ...formData, fechaVigencia: fechaVigenciaISO };
-
-    let success = false;
-    if (editMarco) {
-      success = await complianceService.updateMarcoNormativoById(editMarco.id, payload);
-    } else {
-      const created = await complianceService.createMarcoNormativo(payload);
-      success = !!created;
+    try {
+      if (editMarco) {
+        const ok = await updateMutation.mutateAsync({
+          id: editMarco.id,
+          payload: {
+            nombre: formData.nombre,
+            tipo: formData.tipo,
+            fechaVigencia: fechaVigenciaISO,
+            esObligatorio: formData.esObligatorio,
+            version: formData.version || null,
+            descripcion: formData.descripcion || null,
+          },
+        });
+        if (ok) setDialogOpen(false);
+      } else {
+        const created = await createMutation.mutateAsync({
+          codigo: formData.codigo,
+          nombre: formData.nombre,
+          tipo: formData.tipo,
+          fechaVigencia: fechaVigenciaISO,
+          esObligatorio: formData.esObligatorio,
+          version: formData.version || null,
+          descripcion: formData.descripcion || null,
+        });
+        if (created) setDialogOpen(false);
+      }
+    } catch {
+      // Toast ya lo muestra el servicio
     }
-
-    if (success) {
-      setDialogOpen(false);
-      fetchData();
-    }
-    setSaving(false);
   };
 
   const handleDelete = async () => {
     if (!deleteTarget) return;
-    const success = await complianceService.deleteMarcoNormativo(deleteTarget.id);
-    if (success) {
+    try {
+      await deleteMutation.mutateAsync(deleteTarget.id);
       if (selectedId === deleteTarget.id) setSelectedId(null);
       setDeleteTarget(null);
-      fetchData();
+    } catch {
+      // Toast ya lo muestra el servicio
     }
   };
 
-  const filtered = marcos
-    .filter((m) => showInactive || m.isActive !== false)
-    .filter((m) =>
-      m.nombre.toLowerCase().includes(search.toLowerCase()) ||
-      m.codigo?.toLowerCase().includes(search.toLowerCase())
-    );
-
   const selectedMarco = marcos.find((m) => m.id === selectedId);
+  const saving = createMutation.isPending || updateMutation.isPending;
 
-  if (loading) {
+  if (isLoading) {
     return (
       <div className="flex gap-6 h-[600px] pt-4">
         <Skeleton className="w-80 h-full rounded-xl" />
@@ -132,8 +113,7 @@ const openAdd = () => {
 
   return (
     <div className="space-y-6 pt-2">
-      <div className="flex flex-col lg:flex-row gap-6 items-start">
-        {/* 1. LISTA (COMPONENTE APARTE) */}
+      <div className="grid grid-cols-1 lg:grid-cols-[320px_minmax(0,1fr)] gap-6">
         <MarcoNormativoList 
           marcos={marcos}
           selectedId={selectedId}
@@ -163,7 +143,7 @@ const openAdd = () => {
                   <Button variant="outline" size="sm" className="text-destructive bg-white hover:bg-destructive/5" onClick={() => setDeleteTarget(selectedMarco)}>
                     <Trash2 className="h-4 w-4 mr-2" /> Eliminar
                   </Button>
-                  <div className="h-6 w-[1px] bg-gray-300 mx-1 hidden md:block" />
+                  <div className="h-6 w-px bg-gray-300 mx-1 hidden md:block" />
                   <Button size="sm" className="bg-white text-black border shadow-sm hover:bg-gray-50">
                     <Plus className="h-4 w-4 mr-2" /> Agregar Cláusula
                   </Button>

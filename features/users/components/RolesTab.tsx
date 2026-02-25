@@ -1,71 +1,118 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import type { UpsertRoleCommand } from "@/services/identity/services/roles.service";
+import type { RoleDto } from "@/services/identity/services/roles.service";
 import {
-  rolesService,
-  type RoleDto,
-  type UpsertRoleCommand,
-} from "@/services/identity/services/roles.service";
-import { useAuthStore } from "@/features/auth/store/auth.store";
+  useRoles,
+  useRolePermissions,
+  useRoleCreateOrUpdateMutation,
+  useRoleDeleteMutation,
+  useUpdateRolePermissionsMutation,
+} from "@/features/users/hooks/use-roles-query";
+import { ROLE_PERMISSION_GROUPS } from "@/features/users/constants/role-permissions-ui";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { TableSkeleton } from "@/components/ui/table-skeleton";
+import { Label } from "@/components/ui/label";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { Skeleton } from "@/components/ui/skeleton";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from "@/components/ui/dialog";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { ConfirmModal } from "@/components/shared/confirm-modal";
-import { Pencil, Trash2, Plus } from "lucide-react";
+import { cn } from "@/lib/utils";
+import { Plus, Shield, MoreVertical, Pencil, Trash2 } from "lucide-react";
+import { RolePermissionsEditor } from "./roles/RolePermissionsEditor";
+
+function RolesListSkeleton() {
+  return (
+    <div className="space-y-1 pr-2">
+      {[1, 2, 3, 4, 5].map((i) => (
+        <Skeleton key={i} className="h-10 w-full rounded-lg" />
+      ))}
+    </div>
+  );
+}
+
+function RolePermissionsSkeleton() {
+  return (
+    <div className="space-y-6">
+      <div className="flex items-start justify-between gap-4">
+        <div className="space-y-2">
+          <Skeleton className="h-6 w-48" />
+          <Skeleton className="h-4 w-64" />
+        </div>
+        <Skeleton className="h-9 w-32" />
+      </div>
+      {[1, 2, 3].map((g) => (
+        <div key={g} className="space-y-3">
+          <div className="flex items-center gap-2">
+            <Skeleton className="h-5 w-12 rounded" />
+            <Skeleton className="h-4 w-36" />
+          </div>
+          <div className="grid gap-2">
+            {[1, 2, 3].map((i) => (
+              <Skeleton key={i} className="h-12 w-full rounded-lg" />
+            ))}
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
 
 export function RolesTab() {
-  const accessToken = useAuthStore((s) => s.accessToken);
-  const tenant = useAuthStore((s) => s.user?.tenant ?? "root");
-  const auth = accessToken ? { accessToken, tenant } : undefined;
-  const [roles, setRoles] = useState<RoleDto[]>([]);
-  const [loading, setLoading] = useState(true);
-
-  const [createOpen, setCreateOpen] = useState(false);
-  const [createLoading, setCreateLoading] = useState(false);
-  const [createForm, setCreateForm] = useState<UpsertRoleCommand>({
-    name: "",
-    description: "",
-  });
+  const [selectedRoleId, setSelectedRoleId] = useState<string | null>(null);
+  const [showCreate, setShowCreate] = useState(false);
+  const [newName, setNewName] = useState("");
+  const [newDesc, setNewDesc] = useState("");
 
   const [editOpen, setEditOpen] = useState(false);
   const [editRole, setEditRole] = useState<RoleDto | null>(null);
-  const [editForm, setEditForm] = useState<UpsertRoleCommand>({ name: "", description: "" });
-  const [editLoading, setEditLoading] = useState(false);
-
+  const [editForm, setEditForm] = useState<UpsertRoleCommand>({
+    name: "",
+    description: "",
+  });
   const [deleteTarget, setDeleteTarget] = useState<RoleDto | null>(null);
-  const [deleteLoading, setDeleteLoading] = useState(false);
 
-  const loadRoles = () => {
-    if (!auth) return;
-    setLoading(true);
-    rolesService
-      .getRoles(auth)
-      .then(setRoles)
-      .catch(() => setRoles([]))
-      .finally(() => setLoading(false));
-  };
+  const { data: roles = [], isLoading } = useRoles();
+  const { data: rolePermissions, isLoading: loadingPermissions } =
+    useRolePermissions(selectedRoleId);
+  const createMutation = useRoleCreateOrUpdateMutation();
+  const updateMutation = useRoleCreateOrUpdateMutation();
+  const deleteMutation = useRoleDeleteMutation();
+  const updatePermissionsMutation = useUpdateRolePermissionsMutation();
+
+  const selectedRole = roles.find((r) => r.id === selectedRoleId);
+  const grantedPermissionCodes = rolePermissions?.permissions ?? [];
 
   useEffect(() => {
-    if (!accessToken) {
-      setLoading(false);
-      return;
-    }
-    loadRoles();
-  }, [accessToken, tenant]);
+    if (!selectedRoleId && roles.length > 0) setSelectedRoleId(roles[0].id);
+  }, [roles, selectedRoleId]);
 
   const handleCreateSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!auth) return;
-    setCreateLoading(true);
+    if (!newName.trim()) return;
     try {
-      await rolesService.createOrUpdateRole(createForm, auth);
-      setCreateOpen(false);
-      setCreateForm({ name: "", description: "" });
-      loadRoles();
+      await createMutation.mutateAsync({
+        name: newName.trim(),
+        description: newDesc.trim() || null,
+      });
+      setNewName("");
+      setNewDesc("");
+      setShowCreate(false);
     } catch (err) {
       console.error(err);
-    } finally {
-      setCreateLoading(false);
     }
   };
 
@@ -81,126 +128,225 @@ export function RolesTab() {
 
   const handleEditSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!auth || !editRole) return;
-    setEditLoading(true);
+    if (!editRole) return;
     try {
-      await rolesService.createOrUpdateRole(
-        { id: editRole.id, name: editForm.name, description: editForm.description ?? null },
-        auth
-      );
+      await updateMutation.mutateAsync({
+        id: editRole.id,
+        name: editForm.name,
+        description: editForm.description ?? null,
+      });
       setEditOpen(false);
       setEditRole(null);
-      loadRoles();
     } catch (err) {
       console.error(err);
-    } finally {
-      setEditLoading(false);
     }
   };
 
   const handleDeleteConfirm = async () => {
-    if (!deleteTarget || !auth) return;
-    setDeleteLoading(true);
+    if (!deleteTarget) return;
     try {
-      await rolesService.deleteRole(deleteTarget.id, auth);
-      setRoles((prev) => prev.filter((r) => r.id !== deleteTarget.id));
+      await deleteMutation.mutateAsync(deleteTarget.id);
+      setSelectedRoleId((id) => (id === deleteTarget.id ? null : id));
       setDeleteTarget(null);
     } catch (e) {
       console.error(e);
-    } finally {
-      setDeleteLoading(false);
     }
   };
 
   return (
-    <div>
-      <div className="mb-4 flex items-center justify-end gap-4">
-        <Button
-          type="button"
-          onClick={() => {
-            setCreateOpen(true);
-            setCreateForm({ name: "", description: "" });
-          }}
-          className="inline-flex items-center gap-2 rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90"
-        >
-          <Plus className="size-4" />
-          Nuevo Rol
-        </Button>
+    <>
+      <div className="flex gap-6 h-full">
+        {/* Left: roles list */}
+        <div className="w-64 shrink-0 space-y-3">
+          <div className="flex items-center justify-between">
+            <h3 className="text-sm font-semibold text-foreground">
+              Roles Definidos
+            </h3>
+            <Button
+              size="icon"
+              variant="ghost"
+              className="h-7 w-7"
+              onClick={() => setShowCreate(true)}
+            >
+              <Plus className="h-4 w-4" />
+            </Button>
+          </div>
+          <ScrollArea className="h-[calc(100vh-320px)]">
+            {isLoading ? (
+              <RolesListSkeleton />
+            ) : (
+              <div className="space-y-1 pr-2">
+                {roles.map((r) => (
+                  <button
+                    key={r.id}
+                    type="button"
+                    onClick={() => setSelectedRoleId(r.id)}
+                    className={cn(
+                      "flex w-full items-center gap-2 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors text-left",
+                      selectedRoleId === r.id
+                        ? "bg-primary text-primary-foreground"
+                        : "text-muted-foreground hover:bg-muted hover:text-foreground"
+                    )}
+                  >
+                    <Shield className="h-3.5 w-3.5 shrink-0" />
+                    <span className="truncate">{r.name}</span>
+                  </button>
+                ))}
+              </div>
+            )}
+          </ScrollArea>
+        </div>
+
+        {/* Right: permisos del rol */}
+        <div className="flex-1 min-w-0">
+          {selectedRole ? (
+            <div className="space-y-4">
+              {loadingPermissions ? (
+                <RolePermissionsSkeleton />
+              ) : (
+                <RolePermissionsEditor
+                  role={selectedRole}
+                  permissionGroups={ROLE_PERMISSION_GROUPS}
+                  grantedPermissionCodes={grantedPermissionCodes}
+                  onSave={async (permissions) => {
+                    await updatePermissionsMutation.mutateAsync({
+                      roleId: selectedRole.id,
+                      permissions,
+                    });
+                  }}
+                  isSaving={updatePermissionsMutation.isPending}
+                  headerActions={
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-8 w-8 shrink-0"
+                        >
+                          <MoreVertical className="h-4 w-4" />
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end">
+                        <DropdownMenuItem
+                          onClick={() => openEdit(selectedRole)}
+                        >
+                          <Pencil className="h-4 w-4 mr-2" />
+                          Editar rol
+                        </DropdownMenuItem>
+                        <DropdownMenuItem
+                          className="text-destructive focus:text-destructive"
+                          onClick={() => setDeleteTarget(selectedRole)}
+                        >
+                          <Trash2 className="h-4 w-4 mr-2" />
+                          Eliminar
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  }
+                />
+              )}
+            </div>
+          ) : (
+            <div className="flex items-center justify-center h-64 text-muted-foreground text-sm">
+              Selecciona un rol para ver sus permisos
+            </div>
+          )}
+        </div>
       </div>
 
-      {/* Modal crear rol */}
-      {createOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-          <div className="w-full max-w-md rounded-lg border border-slate-200 bg-white p-6 dark:border-slate-800 dark:bg-slate-900">
-            <h2 className="text-lg font-semibold text-slate-900 dark:text-slate-100">
-              Crear rol
-            </h2>
-            <form onSubmit={handleCreateSubmit} className="mt-4 space-y-3">
-              <div>
-                <label className="mb-1 block text-sm text-slate-600 dark:text-slate-400">Nombre</label>
+      {/* Dialog crear rol */}
+      <Dialog open={showCreate} onOpenChange={setShowCreate}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Nuevo Rol</DialogTitle>
+          </DialogHeader>
+          <form onSubmit={handleCreateSubmit}>
+            <div className="space-y-4 py-2">
+              <div className="space-y-2">
+                <Label>Nombre</Label>
                 <Input
-                  value={createForm.name}
-                  onChange={(e) => setCreateForm((f) => ({ ...f, name: e.target.value }))}
-                  required
-                  placeholder="Nombre del rol"
+                  value={newName}
+                  onChange={(e) => setNewName(e.target.value)}
+                  placeholder="Ej: Supervisor de Calidad"
                 />
               </div>
-              <div>
-                <label className="mb-1 block text-sm text-slate-600 dark:text-slate-400">Descripción</label>
+              <div className="space-y-2">
+                <Label>Descripción (opcional)</Label>
                 <Input
-                  value={createForm.description ?? ""}
-                  onChange={(e) => setCreateForm((f) => ({ ...f, description: e.target.value }))}
-                  placeholder="Descripción (opcional)"
+                  value={newDesc}
+                  onChange={(e) => setNewDesc(e.target.value)}
+                  placeholder="Breve descripción del rol"
                 />
               </div>
-              <div className="flex gap-2 pt-2">
-                <Button type="submit" disabled={createLoading} className="flex-1">
-                  {createLoading ? "Creando…" : "Crear"}
-                </Button>
-                <Button type="button" variant="outline" onClick={() => setCreateOpen(false)} disabled={createLoading}>
-                  Cancelar
-                </Button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
+            </div>
+            <DialogFooter>
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => setShowCreate(false)}
+              >
+                Cancelar
+              </Button>
+              <Button
+                type="submit"
+                disabled={createMutation.isPending || !newName.trim()}
+              >
+                {createMutation.isPending ? "Creando…" : "Crear"}
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
 
-      {/* Modal editar rol */}
-      {editOpen && editRole && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-          <div className="w-full max-w-md rounded-lg border border-slate-200 bg-white p-6 dark:border-slate-800 dark:bg-slate-900">
-            <h2 className="text-lg font-semibold text-slate-900 dark:text-slate-100">Editar rol</h2>
-            <form onSubmit={handleEditSubmit} className="mt-4 space-y-3">
-              <div>
-                <label className="mb-1 block text-sm text-slate-600 dark:text-slate-400">Nombre</label>
-                <Input
-                  value={editForm.name}
-                  onChange={(e) => setEditForm((f) => ({ ...f, name: e.target.value }))}
-                  required
-                  placeholder="Nombre del rol"
-                />
+      {/* Dialog editar rol */}
+      <Dialog open={editOpen} onOpenChange={setEditOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Editar rol</DialogTitle>
+          </DialogHeader>
+          {editRole && (
+            <form onSubmit={handleEditSubmit}>
+              <div className="space-y-4 py-2">
+                <div className="space-y-2">
+                  <Label>Nombre</Label>
+                  <Input
+                    value={editForm.name}
+                    onChange={(e) =>
+                      setEditForm((f) => ({ ...f, name: e.target.value }))
+                    }
+                    placeholder="Nombre del rol"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label>Descripción (opcional)</Label>
+                  <Input
+                    value={editForm.description ?? ""}
+                    onChange={(e) =>
+                      setEditForm((f) => ({
+                        ...f,
+                        description: e.target.value,
+                      }))
+                    }
+                    placeholder="Breve descripción del rol"
+                  />
+                </div>
               </div>
-              <div>
-                <label className="mb-1 block text-sm text-slate-600 dark:text-slate-400">Descripción</label>
-                <Input
-                  value={editForm.description ?? ""}
-                  onChange={(e) => setEditForm((f) => ({ ...f, description: e.target.value }))}
-                  placeholder="Descripción (opcional)"
-                />
-              </div>
-              <div className="flex gap-2 pt-2">
-                <Button type="submit" disabled={editLoading} className="flex-1">
-                  {editLoading ? "Guardando…" : "Guardar"}
-                </Button>
-                <Button type="button" variant="outline" onClick={() => setEditOpen(false)} disabled={editLoading}>
+              <DialogFooter>
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => setEditOpen(false)}
+                >
                   Cancelar
                 </Button>
-              </div>
+                <Button type="submit" disabled={updateMutation.isPending}>
+                  {updateMutation.isPending ? "Guardando…" : "Guardar"}
+                </Button>
+              </DialogFooter>
             </form>
-          </div>
-        </div>
-      )}
+          )}
+        </DialogContent>
+      </Dialog>
 
       <ConfirmModal
         open={!!deleteTarget}
@@ -208,77 +354,10 @@ export function RolesTab() {
         message="¿Está seguro de que desea eliminar este rol? Esta acción no se puede deshacer."
         confirmLabel="Eliminar"
         variant="destructive"
-        loading={deleteLoading}
+        loading={deleteMutation.isPending}
         onConfirm={handleDeleteConfirm}
         onCancel={() => setDeleteTarget(null)}
       />
-
-      <div className="overflow-hidden rounded-lg border border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-900">
-        {loading ? (
-          <div className="p-4">
-            <TableSkeleton rows={8} cols={3} />
-          </div>
-        ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="border-b border-slate-200 bg-slate-50 dark:border-slate-800 dark:bg-slate-800/50">
-                  <th className="px-4 py-3 text-left font-semibold text-slate-900 dark:text-slate-100">
-                    Nombre
-                  </th>
-                  <th className="px-4 py-3 text-left font-semibold text-slate-900 dark:text-slate-100">
-                    Descripción
-                  </th>
-                  <th className="px-4 py-3 text-right font-semibold text-slate-900 dark:text-slate-100">
-                    Acciones
-                  </th>
-                </tr>
-              </thead>
-              <tbody>
-                {roles.length === 0 ? (
-                  <tr>
-                    <td colSpan={3} className="px-4 py-8 text-center text-slate-500">
-                      No hay roles
-                    </td>
-                  </tr>
-                ) : (
-                  roles.map((role) => (
-                    <tr
-                      key={role.id}
-                      className="border-b border-slate-100 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-800/30"
-                    >
-                      <td className="px-4 py-3 font-medium">{role.name}</td>
-                      <td className="px-4 py-3 text-slate-600 dark:text-slate-400">
-                        {role.description ?? "—"}
-                      </td>
-                      <td className="px-4 py-3 text-right">
-                        <Button
-                          type="button"
-                          variant="ghost"
-                          size="icon"
-                          onClick={() => openEdit(role)}
-                          className="mr-2 h-8 w-8 rounded text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-950/40"
-                        >
-                          <Pencil className="size-4" />
-                        </Button>
-                        <Button
-                          type="button"
-                          variant="ghost"
-                          size="icon"
-                          onClick={() => setDeleteTarget(role)}
-                          className="h-8 w-8 rounded text-red-600 hover:bg-red-50 dark:hover:bg-red-950/40"
-                        >
-                          <Trash2 className="size-4" />
-                        </Button>
-                      </td>
-                    </tr>
-                  ))
-                )}
-              </tbody>
-            </table>
-          </div>
-        )}
-      </div>
-    </div>
+    </>
   );
 }

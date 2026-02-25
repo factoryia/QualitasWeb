@@ -13,14 +13,17 @@ interface DashboardHeaderProps {
   sidebarOpen?: boolean;
 }
 
+/** Jerarquía: Inicio > [Sección/Padre] > [Página actual]. Ej: Inicio > Administración > Usuarios */
 function getBreadcrumbs(pathname: string): { label: string; href?: string }[] {
   const crumbs: { label: string; href?: string }[] = [{ label: "Inicio", href: "/" }];
-  
-  if (pathname === "/") return [{ label: "Dashboard" }];
-  
+
+  if (pathname === "/") return [{ label: "Inicio", href: "/" }, { label: "Dashboard" }];
+
   if (pathname.startsWith("/usuarios")) {
+    crumbs.push({ label: "Administración" });
     crumbs.push({ label: "Usuarios" });
   } else if (pathname.startsWith("/organizacion")) {
+    crumbs.push({ label: "Administración" });
     crumbs.push({ label: "Organización" });
   } else if (pathname.startsWith("/normatividad")) {
     crumbs.push({ label: "Normatividad" });
@@ -32,12 +35,13 @@ function getBreadcrumbs(pathname: string): { label: string; href?: string }[] {
       crumbs.push({ label: "Cumplimiento" });
     }
   } else if (pathname.startsWith("/auditoria")) {
+    crumbs.push({ label: "Control" });
     crumbs.push({ label: "Auditoría" });
-  } 
-    else {
-    crumbs.push({ label: pathname.split("/")[1] || "Página" });
+  } else {
+    const segment = pathname.split("/").filter(Boolean)[0];
+    crumbs.push({ label: segment ? segment.charAt(0).toUpperCase() + segment.slice(1) : "Página" });
   }
-  
+
   return crumbs;
 }
 

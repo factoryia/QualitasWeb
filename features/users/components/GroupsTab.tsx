@@ -1,30 +1,27 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import {
-  groupsService,
-  type GroupDto,
-  type CreateGroupCommand,
-  type UpdateGroupCommand,
+import { useState } from "react";
+import type {
+  GroupDto,
+  CreateGroupCommand,
+  UpdateGroupCommand,
 } from "@/services/identity/services/groups.service";
-import { rolesService, type RoleDto } from "@/services/identity/services/roles.service";
-import { useAuthStore } from "@/features/auth/store/auth.store";
+import {
+  useGroups,
+  useGroupCreateMutation,
+  useGroupUpdateMutation,
+  useGroupDeleteMutation,
+} from "@/features/users/hooks/use-groups-query";
+import { useRoles } from "@/features/users/hooks/use-roles-query";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { TableSkeleton } from "@/components/ui/table-skeleton";
+import { Card, CardContent } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
 import { ConfirmModal } from "@/components/shared/confirm-modal";
-import { Pencil, Trash2, Plus } from "lucide-react";
+import { Pencil, Trash2, Plus, Users } from "lucide-react";
 
 export function GroupsTab() {
-  const accessToken = useAuthStore((s) => s.accessToken);
-  const tenant = useAuthStore((s) => s.user?.tenant ?? "root");
-  const auth = accessToken ? { accessToken, tenant } : undefined;
-  const [groups, setGroups] = useState<GroupDto[]>([]);
-  const [roles, setRoles] = useState<RoleDto[]>([]);
-  const [loading, setLoading] = useState(true);
-
   const [createOpen, setCreateOpen] = useState(false);
-  const [createLoading, setCreateLoading] = useState(false);
   const [createError, setCreateError] = useState("");
   const [createForm, setCreateForm] = useState<CreateGroupCommand>({
     name: "",
@@ -41,54 +38,31 @@ export function GroupsTab() {
     isDefault: false,
     roleIds: [],
   });
-  const [editLoading, setEditLoading] = useState(false);
-
   const [deleteTarget, setDeleteTarget] = useState<GroupDto | null>(null);
-  const [deleteLoading, setDeleteLoading] = useState(false);
 
-  const loadGroups = () => {
-    if (!auth) return;
-    setLoading(true);
-    groupsService
-      .getGroups(undefined, auth)
-      .then(setGroups)
-      .catch(() => setGroups([]))
-      .finally(() => setLoading(false));
-  };
-
-  useEffect(() => {
-    if (!accessToken) {
-      setLoading(false);
-      return;
-    }
-    loadGroups();
-  }, [accessToken, tenant]);
-
-  useEffect(() => {
-    if (!auth) return;
-    rolesService.getRoles(auth).then(setRoles).catch(() => setRoles([]));
-  }, [auth]);
+  const { data: groups = [], isLoading } = useGroups();
+  const { data: roles = [] } = useRoles();
+  const createMutation = useGroupCreateMutation();
+  const updateMutation = useGroupUpdateMutation();
+  const deleteMutation = useGroupDeleteMutation();
 
   const handleCreateSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!auth) return;
     setCreateError("");
-    setCreateLoading(true);
     try {
-      await groupsService.createGroup(
-        {
-          ...createForm,
-          roleIds: createForm.roleIds?.length ? createForm.roleIds : null,
-        },
-        auth
-      );
+      await createMutation.mutateAsync({
+        ...createForm,
+        roleIds: createForm.roleIds?.length ? createForm.roleIds : null,
+      });
       setCreateOpen(false);
       setCreateForm({ name: "", description: "", isDefault: false, roleIds: [] });
-      loadGroups();
     } catch (err: unknown) {
-      const res = err && typeof err === "object" && "response" in err
-        ? (err as { response?: { data?: { errors?: string[]; detail?: string } } }).response?.data
-        : undefined;
+      const res =
+        err && typeof err === "object" && "response" in err
+          ? (err as {
+              response?: { data?: { errors?: string[]; detail?: string } };
+            }).response?.data
+          : undefined;
       if (Array.isArray(res?.errors) && res.errors.length > 0) {
         setCreateError(res.errors.join(". "));
       } else if (res?.detail) {
@@ -96,8 +70,6 @@ export function GroupsTab() {
       } else {
         setCreateError("Error al crear el grupo. Intente de nuevo.");
       }
-    } finally {
-      setCreateLoading(false);
     }
   };
 
@@ -114,80 +86,161 @@ export function GroupsTab() {
 
   const handleEditSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!auth || !editGroup) return;
-    setEditLoading(true);
+    if (!editGroup) return;
     try {
-      await groupsService.updateGroup(
-        editGroup.id,
-        {
+      await updateMutation.mutateAsync({
+        id: editGroup.id,
+        payload: {
           ...editForm,
           roleIds: editForm.roleIds?.length ? editForm.roleIds : null,
         },
-        auth
-      );
+      });
       setEditOpen(false);
       setEditGroup(null);
-      loadGroups();
     } catch (err) {
       console.error(err);
-    } finally {
-      setEditLoading(false);
     }
   };
 
   const handleDeleteConfirm = async () => {
-    if (!deleteTarget || !auth) return;
-    setDeleteLoading(true);
+    if (!deleteTarget) return;
     try {
-      await groupsService.deleteGroup(deleteTarget.id, auth);
-      setGroups((prev) => prev.filter((g) => g.id !== deleteTarget.id));
+      await deleteMutation.mutateAsync(deleteTarget.id);
       setDeleteTarget(null);
     } catch (e) {
       console.error(e);
-    } finally {
-      setDeleteLoading(false);
     }
   };
 
   return (
-    <div>
-      <div className="mb-4 flex items-center justify-end gap-4">
+    <div className="space-y-4">
+      <div className="flex justify-end">
         <Button
           type="button"
           onClick={() => {
             setCreateOpen(true);
             setCreateError("");
-            setCreateForm({ name: "", description: "", isDefault: false, roleIds: [] });
+            setCreateForm({
+              name: "",
+              description: "",
+              isDefault: false,
+              roleIds: [],
+            });
           }}
-          className="inline-flex items-center gap-2 rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90"
         >
-          <Plus className="size-4" />
+          <Plus className="h-4 w-4 mr-1.5" />
           Nuevo Grupo
         </Button>
       </div>
 
+      {isLoading ? (
+        <div className="flex items-center justify-center h-40 text-sm text-muted-foreground">
+          Cargando grupos...
+        </div>
+      ) : groups.length === 0 ? (
+        <div className="flex flex-col items-center justify-center h-48 text-muted-foreground text-sm space-y-2">
+          <Users className="h-10 w-10 opacity-40" />
+          <p className="font-medium">Sin grupos creados</p>
+          <p className="text-xs">
+            Crea un grupo para organizar a tus usuarios.
+          </p>
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          {groups.map((g) => (
+            <Card key={g.id} className="relative group">
+              <CardContent className="p-5 space-y-3">
+                <div className="flex items-start justify-between">
+                  <div className="flex items-center gap-3">
+                    <div className="h-10 w-10 rounded-lg bg-primary/10 flex items-center justify-center">
+                      <Users className="h-5 w-5 text-primary" />
+                    </div>
+                    <div>
+                      <h3 className="font-semibold text-sm">{g.name}</h3>
+                      <p className="text-xs text-muted-foreground">
+                        {g.memberCount ?? 0} Miembro
+                        {(g.memberCount ?? 0) !== 1 ? "s" : ""}
+                      </p>
+                    </div>
+                  </div>
+                  <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-7 w-7"
+                      onClick={() => openEdit(g)}
+                    >
+                      <Pencil className="h-3.5 w-3.5" />
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-7 w-7 text-destructive"
+                      onClick={() => setDeleteTarget(g)}
+                    >
+                      <Trash2 className="h-3.5 w-3.5" />
+                    </Button>
+                  </div>
+                </div>
+
+                {g.description && (
+                  <p className="text-xs text-muted-foreground leading-relaxed">
+                    {g.description}
+                  </p>
+                )}
+
+                {(g.roleNames?.length ?? 0) > 0 && (
+                  <div className="space-y-1.5">
+                    <p className="text-[10px] font-semibold text-primary tracking-wider uppercase">
+                      Roles incluidos
+                    </p>
+                    <div className="flex flex-wrap gap-1.5">
+                      {(g.roleNames ?? []).map((name) => (
+                        <Badge
+                          key={name}
+                          variant="outline"
+                          className="text-[11px]"
+                        >
+                          {name}
+                        </Badge>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+      )}
+
       {/* Modal crear grupo */}
       {createOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-          <div className="max-h-[90vh] w-full max-w-md overflow-y-auto rounded-lg border border-slate-200 bg-white p-6 dark:border-slate-800 dark:bg-slate-900">
-            <h2 className="text-lg font-semibold text-slate-900 dark:text-slate-100">
-              Crear grupo
-            </h2>
+          <Card className="max-h-[90vh] w-full max-w-md overflow-y-auto p-6">
+            <h2 className="text-lg font-semibold">Crear grupo</h2>
             <form onSubmit={handleCreateSubmit} className="mt-4 space-y-3">
               <div>
-                <label className="mb-1 block text-sm text-slate-600 dark:text-slate-400">Nombre</label>
+                <label className="mb-1 block text-sm text-muted-foreground">
+                  Nombre
+                </label>
                 <Input
                   value={createForm.name}
-                  onChange={(e) => setCreateForm((f) => ({ ...f, name: e.target.value }))}
+                  onChange={(e) =>
+                    setCreateForm((f) => ({ ...f, name: e.target.value }))
+                  }
                   required
                   placeholder="Nombre del grupo"
                 />
               </div>
               <div>
-                <label className="mb-1 block text-sm text-slate-600 dark:text-slate-400">Descripción</label>
+                <label className="mb-1 block text-sm text-muted-foreground">
+                  Descripción
+                </label>
                 <Input
                   value={createForm.description ?? ""}
-                  onChange={(e) => setCreateForm((f) => ({ ...f, description: e.target.value }))}
+                  onChange={(e) =>
+                    setCreateForm((f) => ({ ...f, description: e.target.value }))
+                  }
                   placeholder="Descripción (opcional)"
                 />
               </div>
@@ -195,74 +248,93 @@ export function GroupsTab() {
                 <input
                   type="checkbox"
                   checked={createForm.isDefault}
-                  onChange={(e) => setCreateForm((f) => ({ ...f, isDefault: e.target.checked }))}
-                  className="rounded border-slate-300"
+                  onChange={(e) =>
+                    setCreateForm((f) => ({ ...f, isDefault: e.target.checked }))
+                  }
+                  className="rounded border-input"
                 />
-                <span className="text-sm text-slate-600 dark:text-slate-400">Grupo por defecto</span>
+                <span className="text-sm text-muted-foreground">
+                  Grupo por defecto
+                </span>
               </label>
               <div>
-                <label className="mb-2 block text-sm text-slate-600 dark:text-slate-400">Roles</label>
-                <div className="max-h-32 space-y-2 overflow-y-auto rounded border border-slate-200 p-2 dark:border-slate-700">
-                  {roles.length === 0 ? (
-                    <p className="text-sm text-slate-500">No hay roles disponibles</p>
-                  ) : (
-                    roles.map((role) => (
-                      <label key={role.id} className="flex items-center gap-2">
-                        <input
-                          type="checkbox"
-                          checked={(createForm.roleIds ?? []).includes(role.id)}
-                          onChange={() =>
-                            setCreateForm((f) => ({
-                              ...f,
-                              roleIds: (f.roleIds ?? []).includes(role.id)
-                                ? (f.roleIds ?? []).filter((id) => id !== role.id)
-                                : [...(f.roleIds ?? []), role.id],
-                            }))
-                          }
-                          className="rounded border-slate-300"
-                        />
-                        <span className="text-sm">{role.name}</span>
-                      </label>
-                    ))
-                  )}
+                <label className="mb-2 block text-sm text-muted-foreground">
+                  Roles
+                </label>
+                <div className="max-h-32 space-y-2 overflow-y-auto rounded border p-2">
+                  {roles.map((role) => (
+                    <label key={role.id} className="flex items-center gap-2">
+                      <input
+                        type="checkbox"
+                        checked={(createForm.roleIds ?? []).includes(role.id)}
+                        onChange={() =>
+                          setCreateForm((f) => ({
+                            ...f,
+                            roleIds: (f.roleIds ?? []).includes(role.id)
+                              ? (f.roleIds ?? []).filter((id) => id !== role.id)
+                              : [...(f.roleIds ?? []), role.id],
+                          }))
+                        }
+                        className="rounded border-input"
+                      />
+                      <span className="text-sm">{role.name}</span>
+                    </label>
+                  ))}
                 </div>
               </div>
               {createError && (
-                <p className="text-sm text-red-600 dark:text-red-400">{createError}</p>
+                <p className="text-sm text-destructive">{createError}</p>
               )}
               <div className="flex gap-2 pt-2">
-                <Button type="submit" disabled={createLoading} className="flex-1">
-                  {createLoading ? "Creando…" : "Crear"}
+                <Button
+                  type="submit"
+                  disabled={createMutation.isPending}
+                  className="flex-1"
+                >
+                  {createMutation.isPending ? "Creando…" : "Crear"}
                 </Button>
-                <Button type="button" variant="outline" onClick={() => setCreateOpen(false)} disabled={createLoading}>
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => setCreateOpen(false)}
+                  disabled={createMutation.isPending}
+                >
                   Cancelar
                 </Button>
               </div>
             </form>
-          </div>
+          </Card>
         </div>
       )}
 
       {/* Modal editar grupo */}
       {editOpen && editGroup && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-          <div className="max-h-[90vh] w-full max-w-md overflow-y-auto rounded-lg border border-slate-200 bg-white p-6 dark:border-slate-800 dark:bg-slate-900">
-            <h2 className="text-lg font-semibold text-slate-900 dark:text-slate-100">Editar grupo</h2>
+          <Card className="max-h-[90vh] w-full max-w-md overflow-y-auto p-6">
+            <h2 className="text-lg font-semibold">Editar grupo</h2>
             <form onSubmit={handleEditSubmit} className="mt-4 space-y-3">
               <div>
-                <label className="mb-1 block text-sm text-slate-600 dark:text-slate-400">Nombre</label>
+                <label className="mb-1 block text-sm text-muted-foreground">
+                  Nombre
+                </label>
                 <Input
                   value={editForm.name}
-                  onChange={(e) => setEditForm((f) => ({ ...f, name: e.target.value }))}
+                  onChange={(e) =>
+                    setEditForm((f) => ({ ...f, name: e.target.value }))
+                  }
                   required
                   placeholder="Nombre del grupo"
                 />
               </div>
               <div>
-                <label className="mb-1 block text-sm text-slate-600 dark:text-slate-400">Descripción</label>
+                <label className="mb-1 block text-sm text-muted-foreground">
+                  Descripción
+                </label>
                 <Input
                   value={editForm.description ?? ""}
-                  onChange={(e) => setEditForm((f) => ({ ...f, description: e.target.value }))}
+                  onChange={(e) =>
+                    setEditForm((f) => ({ ...f, description: e.target.value }))
+                  }
                   placeholder="Descripción (opcional)"
                 />
               </div>
@@ -270,14 +342,20 @@ export function GroupsTab() {
                 <input
                   type="checkbox"
                   checked={editForm.isDefault}
-                  onChange={(e) => setEditForm((f) => ({ ...f, isDefault: e.target.checked }))}
-                  className="rounded border-slate-300"
+                  onChange={(e) =>
+                    setEditForm((f) => ({ ...f, isDefault: e.target.checked }))
+                  }
+                  className="rounded border-input"
                 />
-                <span className="text-sm text-slate-600 dark:text-slate-400">Grupo por defecto</span>
+                <span className="text-sm text-muted-foreground">
+                  Grupo por defecto
+                </span>
               </label>
               <div>
-                <label className="mb-2 block text-sm text-slate-600 dark:text-slate-400">Roles</label>
-                <div className="max-h-32 space-y-2 overflow-y-auto rounded border border-slate-200 p-2 dark:border-slate-700">
+                <label className="mb-2 block text-sm text-muted-foreground">
+                  Roles
+                </label>
+                <div className="max-h-32 space-y-2 overflow-y-auto rounded border p-2">
                   {roles.map((role) => (
                     <label key={role.id} className="flex items-center gap-2">
                       <input
@@ -291,7 +369,7 @@ export function GroupsTab() {
                               : [...(f.roleIds ?? []), role.id],
                           }))
                         }
-                        className="rounded border-slate-300"
+                        className="rounded border-input"
                       />
                       <span className="text-sm">{role.name}</span>
                     </label>
@@ -299,15 +377,24 @@ export function GroupsTab() {
                 </div>
               </div>
               <div className="flex gap-2 pt-2">
-                <Button type="submit" disabled={editLoading} className="flex-1">
-                  {editLoading ? "Guardando…" : "Guardar"}
+                <Button
+                  type="submit"
+                  disabled={updateMutation.isPending}
+                  className="flex-1"
+                >
+                  {updateMutation.isPending ? "Guardando…" : "Guardar"}
                 </Button>
-                <Button type="button" variant="outline" onClick={() => setEditOpen(false)} disabled={editLoading}>
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => setEditOpen(false)}
+                  disabled={updateMutation.isPending}
+                >
                   Cancelar
                 </Button>
               </div>
             </form>
-          </div>
+          </Card>
         </div>
       )}
 
@@ -317,81 +404,10 @@ export function GroupsTab() {
         message="¿Está seguro de que desea eliminar este grupo? Esta acción no se puede deshacer."
         confirmLabel="Eliminar"
         variant="destructive"
-        loading={deleteLoading}
+        loading={deleteMutation.isPending}
         onConfirm={handleDeleteConfirm}
         onCancel={() => setDeleteTarget(null)}
       />
-
-      <div className="overflow-hidden rounded-lg border border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-900">
-        {loading ? (
-          <div className="p-4">
-            <TableSkeleton rows={8} cols={4} />
-          </div>
-        ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="border-b border-slate-200 bg-slate-50 dark:border-slate-800 dark:bg-slate-800/50">
-                  <th className="px-4 py-3 text-left font-semibold text-slate-900 dark:text-slate-100">
-                    Nombre
-                  </th>
-                  <th className="px-4 py-3 text-left font-semibold text-slate-900 dark:text-slate-100">
-                    Descripción
-                  </th>
-                  <th className="px-4 py-3 text-left font-semibold text-slate-900 dark:text-slate-100">
-                    Miembros
-                  </th>
-                  <th className="px-4 py-3 text-right font-semibold text-slate-900 dark:text-slate-100">
-                    Acciones
-                  </th>
-                </tr>
-              </thead>
-              <tbody>
-                {groups.length === 0 ? (
-                  <tr>
-                    <td colSpan={4} className="px-4 py-8 text-center text-slate-500">
-                      No hay grupos
-                    </td>
-                  </tr>
-                ) : (
-                  groups.map((group) => (
-                    <tr
-                      key={group.id}
-                      className="border-b border-slate-100 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-800/30"
-                    >
-                      <td className="px-4 py-3 font-medium">{group.name}</td>
-                      <td className="px-4 py-3 text-slate-600 dark:text-slate-400">
-                        {group.description ?? "—"}
-                      </td>
-                      <td className="px-4 py-3">{group.memberCount ?? 0}</td>
-                      <td className="px-4 py-3 text-right">
-                        <Button
-                          type="button"
-                          variant="ghost"
-                          size="icon"
-                          onClick={() => openEdit(group)}
-                          className="mr-2 h-8 w-8 rounded text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-950/40"
-                        >
-                          <Pencil className="size-4" />
-                        </Button>
-                        <Button
-                          type="button"
-                          variant="ghost"
-                          size="icon"
-                          onClick={() => setDeleteTarget(group)}
-                          className="h-8 w-8 rounded text-red-600 hover:bg-red-50 dark:hover:bg-red-950/40"
-                        >
-                          <Trash2 className="size-4" />
-                        </Button>
-                      </td>
-                    </tr>
-                  ))
-                )}
-              </tbody>
-            </table>
-          </div>
-        )}
-      </div>
     </div>
   );
 }
