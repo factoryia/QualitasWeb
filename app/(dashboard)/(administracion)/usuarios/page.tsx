@@ -7,6 +7,8 @@ import { cn } from "@/lib/utils";
 import { RolesTab } from "@/features/users/components/RolesTab";
 import { GroupsTab } from "@/features/users/components/GroupsTab";
 import { UsersTab } from "@/features/users/components/users/UsersTab";
+// Importamos Tabs para la versión móvil
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 const sections = [
   { id: "usuarios", label: "Usuarios", icon: UsersIcon },
@@ -20,9 +22,32 @@ export default function UsuariosPage() {
   const [activeSection, setActiveSection] = useState<Section>("usuarios");
 
   return (
-    <div className="flex gap-6 h-full">
-      {/* Sidebar */}
-      <div className="w-52 shrink-0 space-y-4">
+    <div className="flex flex-col lg:flex-row gap-6 h-full min-h-[calc(100vh-4rem)]">
+      
+      {/* --- VISTA MÓVIL: PILLS --- */}
+      <div className="lg:hidden w-full flex justify-center pt-2">
+        <Tabs 
+          value={activeSection} 
+          onValueChange={(value) => setActiveSection(value as Section)} 
+          className="w-fit"
+        >
+          <TabsList className="bg-muted/50 p-1 h-auto gap-1 border">
+            {sections.map((s) => (
+              <TabsTrigger
+                key={s.id}
+                value={s.id}
+                className="gap-2 px-4 py-2 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground"
+              >
+                <s.icon className="h-4 w-4" />
+                <span className="text-xs sm:text-sm">{s.label}</span>
+              </TabsTrigger>
+            ))}
+          </TabsList>
+        </Tabs>
+      </div>
+
+      {/* --- VISTA DESKTOP: SIDEBAR --- */}
+      <aside className="hidden lg:flex w-52 shrink-0 flex-col gap-4">
         <div className="space-y-1">
           {sections.map((s) => (
             <button
@@ -41,7 +66,7 @@ export default function UsuariosPage() {
           ))}
         </div>
 
-        <Card className="border-dashed">
+        <Card className="border-dashed mt-auto lg:mt-0">
           <CardContent className="p-4 space-y-2">
             <div className="flex items-center gap-2 text-sm font-medium text-foreground">
               <Lightbulb className="h-4 w-4 text-amber-500" />
@@ -54,14 +79,16 @@ export default function UsuariosPage() {
             </p>
           </CardContent>
         </Card>
-      </div>
+      </aside>
 
-      {/* Main content */}
-      <div className="flex-1 min-w-0">
-        {activeSection === "usuarios" && <UsersTab />}
-        {activeSection === "roles" && <RolesTab />}
-        {activeSection === "grupos" && <GroupsTab />}
-      </div>
+      {/* --- CONTENIDO PRINCIPAL --- */}
+      <main className="flex-1 min-w-0">
+        <div className="animate-in fade-in-0 slide-in-from-bottom-2 duration-300">
+          {activeSection === "usuarios" && <UsersTab />}
+          {activeSection === "roles" && <RolesTab />}
+          {activeSection === "grupos" && <GroupsTab />}
+        </div>
+      </main>
     </div>
   );
 }

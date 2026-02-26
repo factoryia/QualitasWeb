@@ -31,12 +31,12 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { ConfirmModal } from "@/components/shared/confirm-modal";
 import { cn } from "@/lib/utils";
-import { Plus, Shield, MoreVertical, Pencil, Trash2 } from "lucide-react";
+import { Plus, Shield, MoreVertical, Pencil, Trash2, ArrowLeft } from "lucide-react";
 import { RolePermissionsEditor } from "./roles/RolePermissionsEditor";
 
 function RolesListSkeleton() {
   return (
-    <div className="space-y-1 pr-2">
+    <div className="space-y-1 pr-2 ">
       {[1, 2, 3, 4, 5].map((i) => (
         <Skeleton key={i} className="h-10 w-full rounded-lg" />
       ))}
@@ -96,10 +96,11 @@ export function RolesTab() {
   const selectedRole = roles.find((r) => r.id === selectedRoleId);
   const grantedPermissionCodes = rolePermissions?.permissions ?? [];
 
-  useEffect(() => {
-    if (!selectedRoleId && roles.length > 0) setSelectedRoleId(roles[0].id);
+ useEffect(() => {
+    if (typeof window !== "undefined" && window.innerWidth >= 1024) {
+      if (!selectedRoleId && roles.length > 0) setSelectedRoleId(roles[0].id);
+    }
   }, [roles, selectedRoleId]);
-
   const handleCreateSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!newName.trim()) return;
@@ -155,23 +156,22 @@ export function RolesTab() {
 
   return (
     <>
-      <div className="flex gap-6 h-full">
-        {/* Left: roles list */}
-        <div className="w-64 shrink-0 space-y-3">
+      <div className="flex flex-col lg:flex-row gap-6 h-full min-h-[500px]">
+        
+        {/* IZQUIERDA: LISTA DE ROLES */}
+        {/* En móvil: se oculta si hay un rol seleccionado (hidden si selectedRoleId existe) */}
+        <div className={cn(
+          "w-full lg:w-64 shrink-0 space-y-3",
+          selectedRoleId ? "hidden lg:block" : "block"
+        )}>
           <div className="flex items-center justify-between">
-            <h3 className="text-sm font-semibold text-foreground">
-              Roles Definidos
-            </h3>
-            <Button
-              size="icon"
-              variant="ghost"
-              className="h-7 w-7"
-              onClick={() => setShowCreate(true)}
-            >
+            <h3 className="text-sm font-semibold text-foreground">Roles Definidos</h3>
+            <Button size="icon" variant="ghost" className="h-7 w-7" onClick={() => setShowCreate(true)}>
               <Plus className="h-4 w-4" />
             </Button>
           </div>
-          <ScrollArea className="h-[calc(100vh-320px)]">
+          
+          <ScrollArea className="h-[calc(100vh-320px)] lg:h-[calc(100vh-280px)]">
             {isLoading ? (
               <RolesListSkeleton />
             ) : (
@@ -182,10 +182,10 @@ export function RolesTab() {
                     type="button"
                     onClick={() => setSelectedRoleId(r.id)}
                     className={cn(
-                      "flex w-full items-center gap-2 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors text-left",
+                      "flex w-full items-center gap-2 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors text-left border",
                       selectedRoleId === r.id
-                        ? "bg-primary text-primary-foreground"
-                        : "text-muted-foreground hover:bg-muted hover:text-foreground"
+                        ? "bg-primary text-primary-foreground border-primary"
+                        : "text-muted-foreground border-border hover:bg-muted hover:text-foreground"
                     )}
                   >
                     <Shield className="h-3.5 w-3.5 shrink-0" />
@@ -197,10 +197,25 @@ export function RolesTab() {
           </ScrollArea>
         </div>
 
-        {/* Right: permisos del rol */}
-        <div className="flex-1 min-w-0">
+        {/* DERECHA: PERMISOS */}
+        {/* En móvil: solo se muestra si hay un rol seleccionado */}
+        <div className={cn(
+          "flex-1 min-w-0",
+          !selectedRoleId ? "hidden lg:block" : "block"
+        )}>
           {selectedRole ? (
             <div className="space-y-4">
+              {/* Botón Volver (Solo móvil) */}
+              <Button 
+                variant="ghost" 
+                size="sm" 
+                className="lg:hidden mb-2 -ml-2 text-muted-foreground"
+                onClick={() => setSelectedRoleId(null)}
+              >
+                <ArrowLeft className="h-4 w-4 mr-2" />
+                Volver a roles
+              </Button>
+
               {loadingPermissions ? (
                 <RolePermissionsSkeleton />
               ) : (
@@ -247,8 +262,8 @@ export function RolesTab() {
               )}
             </div>
           ) : (
-            <div className="flex items-center justify-center h-64 text-muted-foreground text-sm">
-              Selecciona un rol para ver sus permisos
+            <div className="hidden lg:flex items-center justify-center h-64 text-muted-foreground text-sm border border-dashed rounded-xl">
+              Selecciona un rol de la lista para gestionar sus permisos
             </div>
           )}
         </div>
