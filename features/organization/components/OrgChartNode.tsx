@@ -69,6 +69,7 @@ export function OrgChartNode({
       >
         <div className="absolute top-1.5 right-1.5 flex gap-0.5">
           <button
+            title="Editar área"
             type="button"
             onClick={(e) => {
               e.stopPropagation();
@@ -82,6 +83,7 @@ export function OrgChartNode({
             <Pencil className="h-3 w-3" />
           </button>
           <button
+            title="Eliminar área"
             type="button"
             onClick={(e) => {
               e.stopPropagation();

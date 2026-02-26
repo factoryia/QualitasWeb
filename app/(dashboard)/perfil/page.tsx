@@ -303,6 +303,7 @@ export default function ProfilePage() {
                     Seleccionar imagen
                   </Button>
                   <input
+                    title="Seleccionar imagen de perfil"
                     ref={fileRef}
                     type="file"
                     accept="image/jpeg,image/png"

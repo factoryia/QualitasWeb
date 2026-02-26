@@ -58,7 +58,7 @@ export function ClausulaAddDialog({
   const [titulo, setTitulo] = useState("");
   const [tipoRequisito, setTipoRequisito] = useState("Requisito");
   const [esAuditable, setEsAuditable] = useState(true);
-  const [clausulaPadreId, setClausulaPadreId] = useState<string>("");
+  const [clausulaPadreId, setClausulaPadreId] = useState<string>("None");
   const [descripcion, setDescripcion] = useState("");
 
   useEffect(() => {
@@ -67,7 +67,7 @@ export function ClausulaAddDialog({
       setTitulo("");
       setTipoRequisito("Requisito");
       setEsAuditable(true);
-      setClausulaPadreId("");
+      setClausulaPadreId("None");
       setDescripcion("");
     }
   }, [open]);
@@ -81,7 +81,7 @@ export function ClausulaAddDialog({
       titulo: titulo.trim(),
       tipoRequisito: tipoRequisito.trim() || "Requisito",
       esAuditable,
-      clausulaPadreId: clausulaPadreId || null,
+      clausulaPadreId: clausulaPadreId === "none" ? null : clausulaPadreId,
       descripcion: descripcion.trim() || null,
     });
   };
@@ -132,7 +132,7 @@ export function ClausulaAddDialog({
                   <SelectValue placeholder="Ninguna (raíz)" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">Ninguna (raíz)</SelectItem>
+                  <SelectItem value="none">Ninguna (raíz)</SelectItem>
                   {rootClauses.map((c) => (
                     <SelectItem key={c.id} value={c.id}>
                       {c.numeroClausula} — {c.titulo}

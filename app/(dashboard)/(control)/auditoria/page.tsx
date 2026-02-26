@@ -57,12 +57,13 @@ export default function AuditoriasPage() {
         <TabsList className="bg-slate-100/50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700">
           <TabsTrigger value="general" className="gap-2">
             <FileSearch size={16} />
-            <span className="hidden sm:inline">Auditoría General</span>
+            <span className="hidden sm:inline cursor-pointer">Auditoría General</span>
             <span className="sm:hidden">Gestión</span>
           </TabsTrigger>
           <TabsTrigger value="logs" className="gap-2">
             <Activity size={16} />
-            Logs
+            <span className="hidden sm:inline cursor-pointer">Logs</span>
+             <span className="sm:hidden">Logs</span>
           </TabsTrigger>
         </TabsList>
 

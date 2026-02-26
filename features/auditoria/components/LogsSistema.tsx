@@ -21,6 +21,10 @@ import {
 import { LogDetailModal } from "./LogsDetailsModal";
 import { LogsTabla } from "./LogsTabla";
 
+import { DateRange } from "react-day-picker";
+import { format } from "date-fns";
+import { DatePickerWithRange } from "@/components/ui/calendarRangePicker";
+
 export function SystemLogs() {
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
@@ -29,6 +33,7 @@ export function SystemLogs() {
   const [debouncedSearch, setDebouncedSearch] = useState("");
   const [searchField, setSearchField] = useState<keyof AuditQueryParams>("Search");
   const [logTypeFilter, setlogTypeFilter] = useState("all");
+  const [date, setDate] = useState<DateRange | undefined>(undefined);
 
   useEffect(() => {
     const handler = setTimeout(() => setDebouncedSearch(searchTerm), 600);
@@ -40,17 +45,38 @@ export function SystemLogs() {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
 
   const queryParams = useMemo<AuditQueryParams>(() => {
-    const params: AuditQueryParams = {
-      PageNumber: page,
-      PageSize: pageSize,
-    };
-    if (debouncedSearch.trim()) {
-      params[searchField] = debouncedSearch.trim() as never;
-    }
-    if (logTypeFilter === "security") params.Severity = 3;
-    else if (logTypeFilter === "exception") params.Severity = 5;
-    return params;
-  }, [page, pageSize, debouncedSearch, searchField, logTypeFilter]);
+  // 1. Iniciamos con los parámetros básicos (Paginación)
+  const params: AuditQueryParams = {
+    PageNumber: page,
+    PageSize: pageSize,
+  };
+
+  // 2. Agregamos búsqueda por texto si existe
+  if (debouncedSearch.trim()) {
+    params[searchField] = debouncedSearch.trim() as any;
+  }
+
+  // 3. Agregamos filtros de severidad (Selects)
+  if (logTypeFilter === "security") params.Severity = 3;
+  else if (logTypeFilter === "exception") params.Severity = 5;
+
+  // 4. LÓGICA DE RANGO: Aquí está el "truco"
+  // Si solo seleccionas 'from', params.FromUtc NO se crea.
+  // Solo cuando 'to' tiene valor, ambos se adjuntan al objeto.
+  if (date?.from && date?.to) {
+    params.FromUtc = date.from.toISOString();
+    
+    // Opcional: Ajustar el final del día para incluir registros hasta las 23:59:59
+    const endOfDay = new Date(date.to);
+    endOfDay.setHours(23, 59, 59, 999);
+    
+    params.ToUtc = endOfDay.toISOString();
+  }
+
+  return params;
+  
+  // No olvides incluir 'date' en las dependencias para que el memo se recalcule
+}, [page, pageSize, debouncedSearch, searchField, logTypeFilter, date]);
 
   const { data, isFetching, isPending } = useAuditsQuery(queryParams);
   const logs = data?.items ?? [];
@@ -130,9 +156,13 @@ export function SystemLogs() {
             </SelectContent>
           </Select>
 
-          <Button variant="outline" className="gap-2 text-slate-600">
-            <Calendar size={16} /> Rango UTC
-          </Button>
+          <DatePickerWithRange 
+            date={date} 
+            setDate={(newDate) => {
+              setDate(newDate);
+              setPage(1); // Importante: volver a la página 1 al filtrar
+            }} 
+          />
         </div>
       </div>
 

@@ -1,3 +1,4 @@
+// features/auditoria/hooks/use-auditoria-query.ts
 "use client";
 
 import { useQuery } from "@tanstack/react-query";
