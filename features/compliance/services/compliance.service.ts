@@ -21,13 +21,13 @@ const authFromStore = (): AuthHeaders | undefined => {
 
 export interface MarcoNormativoDto {
   id: string;
-  codigo: string;
-  nombre: string;
-  tipo: string;
-  fechaVigencia: string;
-  esObligatorio: boolean;
+  code: string;
+  name: string;
+  type: string;
+  effectiveDate: string;
+  isObligatory: boolean;
   version: string | null;
-  descripcion: string | null;
+  description: string | null;
   isActive?: boolean;
   createdOnUtc?: string | null;
   createdBy?: string | null;
@@ -36,22 +36,22 @@ export interface MarcoNormativoDto {
 }
 
 export interface CreateMarcoNormativoCommand {
-  codigo: string;
-  nombre: string;
-  tipo: string;
-  fechaVigencia: string;
-  esObligatorio: boolean;
+  code: string;
+  name: string;
+  type: string;
+  effectiveDate: string;
+  isObligatory: boolean;
   version?: string | null;
-  descripcion?: string | null;
+  description?: string | null;
 }
 
 export interface UpdateMarcoNormativoCommand {
-  nombre: string;
-  tipo: string;
-  fechaVigencia: string;
-  esObligatorio: boolean;
+  name: string;
+  type: string;
+  effectiveDate: string;
+  isObligatory: boolean;
   version?: string | null;
-  descripcion?: string | null;
+  description?: string | null;
 }
 
 // --- Cláusulas/Requisitos ---

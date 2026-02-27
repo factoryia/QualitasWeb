@@ -35,13 +35,13 @@ import {
 import { useMarcoNormativoUpdateMutation, useMarcoNormativoDeleteMutation } from "../../hooks/use-marcos-normativos-query";
 
 interface MarcoForm {
-  codigo: string;
-  nombre: string;
-  tipo: string;
-  fechaVigencia: string;
-  esObligatorio: boolean;
+  code: string;
+  name: string;
+  type: string;
+  effectiveDate: string;
+  isObligatory: boolean;
   version: string;
-  descripcion: string;
+  description: string;
 }
 
 interface Props {
@@ -71,19 +71,19 @@ export function FrameworkDetail({ frameworkId, marco, onDeleted }: Props) {
 
   const handleSaveEdit = async (formData: MarcoForm) => {
     if (!marco) return;
-    const fechaVigenciaISO = new Date(
-      formData.fechaVigencia + "T00:00:00Z"
+    const effectiveDateISO = new Date(
+      formData.effectiveDate + "T00:00:00Z"
     ).toISOString();
     try {
       const ok = await updateMutation.mutateAsync({
         id: marco.id,
         payload: {
-          nombre: formData.nombre,
-          tipo: formData.tipo,
-          fechaVigencia: fechaVigenciaISO,
-          esObligatorio: formData.esObligatorio,
+          name: formData.name,
+          type: formData.type,
+          effectiveDate: effectiveDateISO,
+          isObligatory: formData.isObligatory,
           version: formData.version || null,
-          descripcion: formData.descripcion || null,
+          description: formData.description || null,
         },
       });
       if (ok) setEditDialogOpen(false);
@@ -246,7 +246,7 @@ export function FrameworkDetail({ frameworkId, marco, onDeleted }: Props) {
               <Label className="text-[10px] uppercase font-bold text-muted-foreground">
                 Tipo de Marco
               </Label>
-              <p className="text-sm font-medium">{marco.tipo}</p>
+              <p className="text-sm font-medium">{marco.type}</p>
             </div>
             <div className="space-y-1">
               <Label className="text-[10px] uppercase font-bold text-muted-foreground">
@@ -254,7 +254,7 @@ export function FrameworkDetail({ frameworkId, marco, onDeleted }: Props) {
               </Label>
               <div className="flex items-center gap-2 text-sm font-medium">
                 <Calendar className="h-4 w-4 text-primary" />
-                {new Date(marco.fechaVigencia).toLocaleDateString("es-ES")}
+                {new Date(marco.effectiveDate).toLocaleDateString("es-ES")}
               </div>
             </div>
             <div className="space-y-1">
@@ -265,7 +265,7 @@ export function FrameworkDetail({ frameworkId, marco, onDeleted }: Props) {
                 {marco.version || "Sin versión"}
               </Badge>
             </div>
-            {marco.descripcion && (
+            {marco.description && (
               <div className="col-span-full space-y-1 bg-muted/30 p-4 rounded-lg">
                 <div className="flex items-center gap-2 mb-1">
                   <Info className="h-3 w-3 text-muted-foreground" />
@@ -274,7 +274,7 @@ export function FrameworkDetail({ frameworkId, marco, onDeleted }: Props) {
                   </Label>
                 </div>
                 <p className="text-sm text-muted-foreground leading-relaxed">
-                  {marco.descripcion}
+                  {marco.description}
                 </p>
               </div>
             )}
@@ -326,7 +326,7 @@ export function FrameworkDetail({ frameworkId, marco, onDeleted }: Props) {
             <AlertDialogDescription>
               El marco normativo{" "}
               <span className="font-bold text-foreground">
-                &quot;{deleteTarget?.nombre}&quot;
+                &quot;{deleteTarget?.name}&quot;
               </span>{" "}
               será eliminado.
             </AlertDialogDescription>

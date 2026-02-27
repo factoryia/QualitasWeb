@@ -10,13 +10,13 @@ import { MarcoNormativoDto } from "../services/compliance.service";
 
 
 interface MarcoForm {
-  codigo: string;
-  nombre: string;
-  tipo: string;
-  fechaVigencia: string;
-  esObligatorio: boolean;
+  code: string;
+  name: string;
+  type: string;
+  effectiveDate: string;
+  isObligatory: boolean;
   version: string;
-  descripcion: string;
+  description: string;
 }
 
 interface MarcoNormativoFormProps {
@@ -29,30 +29,30 @@ interface MarcoNormativoFormProps {
 
 export function MarcoNormativoForm({ open, onOpenChange, onSubmit, initialData, saving }: MarcoNormativoFormProps) {
   const [form, setForm] = useState<MarcoForm>({
-    codigo: "",
-    nombre: "",
-    tipo: "",
-    fechaVigencia: "",
-    esObligatorio: true,
+    code: "",
+    name: "",
+    type: "",
+    effectiveDate: "",
+    isObligatory: true,
     version: "",
-    descripcion: "",
+    description: "",
   });
 
   useEffect(() => {
     if (initialData) {
       setForm({
-        codigo: initialData.codigo,
-        nombre: initialData.nombre,
-        tipo: initialData.tipo,
-        fechaVigencia: initialData.fechaVigencia.split("T")[0],
-        esObligatorio: initialData.esObligatorio,
+        code: initialData.code,
+        name: initialData.name,
+        type: initialData.type,
+        effectiveDate: initialData.effectiveDate,
+        isObligatory: initialData.isObligatory,
         version: initialData.version ?? "",
-        descripcion: initialData.descripcion ?? "",
+        description: initialData.description ?? "",
       });
     } else {
       setForm({
-        codigo: "", nombre: "", tipo: "", fechaVigencia: "",
-        esObligatorio: true, version: "", descripcion: "",
+        code: "", name: "", type: "", effectiveDate: "",
+        isObligatory: true, version: "", description: "",
       });
     }
   }, [initialData, open]);
@@ -75,8 +75,8 @@ export function MarcoNormativoForm({ open, onOpenChange, onSubmit, initialData, 
             <Label>Código del Marco *</Label>
             <Input
               required
-              value={form.codigo}
-              onChange={(e) => setForm({ ...form, codigo: e.target.value })}
+              value={form.code}
+              onChange={(e) => setForm({ ...form, code: e.target.value })}
               placeholder="Ej: ISO-9001"
               disabled={!!initialData}
             />
@@ -85,8 +85,8 @@ export function MarcoNormativoForm({ open, onOpenChange, onSubmit, initialData, 
             <Label>Nombre Completo *</Label>
             <Input
               required
-              value={form.nombre}
-              onChange={(e) => setForm({ ...form, nombre: e.target.value })}
+              value={form.name}
+              onChange={(e) => setForm({ ...form, name: e.target.value })}
               placeholder="Ej: Sistema de Gestión de Calidad"
             />
           </div>
@@ -95,8 +95,8 @@ export function MarcoNormativoForm({ open, onOpenChange, onSubmit, initialData, 
               <Label>Tipo *</Label>
               <Input
                 required
-                value={form.tipo}
-                onChange={(e) => setForm({ ...form, tipo: e.target.value })}
+                value={form.type}
+                onChange={(e) => setForm({ ...form, type: e.target.value })}
                 placeholder="Ej: Norma ISO"
               />
             </div>
@@ -114,26 +114,26 @@ export function MarcoNormativoForm({ open, onOpenChange, onSubmit, initialData, 
             <Input
               required
               type="date"
-              value={form.fechaVigencia}
-              onChange={(e) => setForm({ ...form, fechaVigencia: e.target.value })}
+              value={form.effectiveDate}
+              onChange={(e) => setForm({ ...form, effectiveDate: e.target.value })}
             />
           </div>
           <div className="flex items-center gap-3 p-3 border rounded-lg bg-gray-50/50">
             <Switch
-              id="esObligatorio"
-              checked={form.esObligatorio}
-              onCheckedChange={(checked) => setForm({ ...form, esObligatorio: checked })}
+              id="isObligatory"
+              checked={form.isObligatory}
+              onCheckedChange={(checked) => setForm({ ...form, isObligatory: checked })}
             />
             <div className="grid gap-0.5">
-              <Label htmlFor="esObligatorio" className="text-sm font-bold">Es de carácter obligatorio</Label>
+              <Label htmlFor="isObligatory" className="text-sm font-bold">Es de carácter obligatorio</Label>
               <p className="text-[11px] text-muted-foreground">Marcar si el cumplimiento es requerido legalmente.</p>
             </div>
           </div>
           <div className="grid gap-2">
             <Label>Descripción</Label>
             <Input
-              value={form.descripcion}
-              onChange={(e) => setForm({ ...form, descripcion: e.target.value })}
+              value={form.description}
+              onChange={(e) => setForm({ ...form, description: e.target.value })}
               placeholder="Breve descripción..."
             />
           </div>

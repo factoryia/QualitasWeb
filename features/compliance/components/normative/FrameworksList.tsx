@@ -10,13 +10,13 @@ import { useState } from "react";
 import { useMarcoNormativoCreateMutation } from "../../hooks/use-marcos-normativos-query";
 
 interface MarcoForm {
-  codigo: string;
-  nombre: string;
-  tipo: string;
-  fechaVigencia: string;
-  esObligatorio: boolean;
+  code: string;
+  name: string;
+  type: string;
+  effectiveDate: string;
+  isObligatory: boolean;
   version: string;
-  descripcion: string;
+  description: string;
 }
 
 interface Props {
@@ -30,16 +30,16 @@ export function FrameworksList({ selectedId, onSelect }: Props) {
   const createMutation = useMarcoNormativoCreateMutation();
 
   const handleSave = async (formData: MarcoForm) => {
-    const fechaVigenciaISO = new Date(formData.fechaVigencia + "T00:00:00Z").toISOString();
+    const effectiveDateISO = new Date(formData.effectiveDate + "T00:00:00Z").toISOString();
     try {
       const created = await createMutation.mutateAsync({
-        codigo: formData.codigo,
-        nombre: formData.nombre,
-        tipo: formData.tipo,
-        fechaVigencia: fechaVigenciaISO,
-        esObligatorio: formData.esObligatorio,
+        code: formData.code,
+        name: formData.name,
+        type: formData.type,
+        effectiveDate: effectiveDateISO,
+        isObligatory: formData.isObligatory,
         version: formData.version || null,
-        descripcion: formData.descripcion || null,
+        description: formData.description || null,
       });
       if (created) setDialogOpen(false);
     } catch {
@@ -75,9 +75,9 @@ export function FrameworksList({ selectedId, onSelect }: Props) {
               onClick={() => onSelect(fw.id)}
             >
               <span className="font-bold text-sm text-foreground">
-                {fw.codigo || fw.nombre}
+                {fw.code || fw.name}
               </span>
-              <p className="text-xs text-muted-foreground mt-1">{fw.nombre}</p>
+              <p className="text-xs text-muted-foreground mt-1">{fw.name}</p>
             </div>
           ))}
         </div>
