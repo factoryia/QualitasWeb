@@ -161,7 +161,7 @@ export function RolesTab() {
         {/* IZQUIERDA: LISTA DE ROLES */}
         {/* En móvil: se oculta si hay un rol seleccionado (hidden si selectedRoleId existe) */}
         <div className={cn(
-          "w-full lg:w-64 shrink-0 space-y-3",
+          "w-full lg:w-48 shrink-0 space-y-3",
           selectedRoleId ? "hidden lg:block" : "block"
         )}>
           <div className="flex items-center justify-between">

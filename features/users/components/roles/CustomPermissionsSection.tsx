@@ -39,7 +39,7 @@ export function CustomPermissionsSection({
         </Button>
       </div>
       {permissions.length > 0 && (
-        <div className="grid gap-2">
+        <div className="space-y-3 full">
           {permissions.map((perm) => (
             <PermissionRow
               key={perm.code}

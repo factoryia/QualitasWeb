@@ -32,7 +32,9 @@ export function PermissionRow({
 }: PermissionRowProps) {
   return (
     <div className="flex items-center justify-between rounded-lg border px-4 py-3 hover:bg-muted/50 transition-colors gap-2">
-      <span className="text-sm text-foreground flex-1">{perm.name}</span>
+      <span className="text-sm text-foreground flex-1 min-w-0 truncate">
+        {perm.name}
+      </span>
       <div className="flex items-center gap-1">
         <Switch checked={checked} onCheckedChange={onToggle} />
         <DropdownMenu>

@@ -19,7 +19,7 @@ export function PermissionGroupSection({
   onEdit,
 }: PermissionGroupSectionProps) {
   return (
-    <div className="space-y-3">
+    <div className="space-y-3 full">
       <div className="flex items-center gap-2">
         <span className="text-xs font-bold text-primary bg-primary/10 px-2 py-0.5 rounded">
           {group.moduleCode}
@@ -28,7 +28,7 @@ export function PermissionGroupSection({
           {group.moduleName}
         </span>
       </div>
-      <div className="grid gap-2">
+      <div className="space-y-3">
         {group.permissions.map((perm) => (
           <PermissionRow
             key={perm.code}
