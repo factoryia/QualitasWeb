@@ -13,6 +13,8 @@ import {
   UpdateOrganizationUnitCommand,
 } from "../types";
 
+export type { Organization };
+
 export type AuthHeaders = { accessToken: string; tenant?: string };
 
 function authHeaders(auth?: AuthHeaders): Record<string, string> | undefined {
