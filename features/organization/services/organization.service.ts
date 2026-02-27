@@ -13,7 +13,7 @@ import {
   UpdateOrganizationUnitCommand,
 } from "../types";
 
-export type { Organization };
+export type { Organization, OrganizationUnitDto };
 
 export type AuthHeaders = { accessToken: string; tenant?: string };
 
