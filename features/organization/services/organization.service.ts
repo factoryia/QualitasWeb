@@ -13,8 +13,6 @@ import {
   UpdateOrganizationUnitCommand,
 } from "../types";
 
-export type { Organization, OrganizationUnitDto };
-
 export type AuthHeaders = { accessToken: string; tenant?: string };
 
 function authHeaders(auth?: AuthHeaders): Record<string, string> | undefined {
@@ -455,3 +453,4 @@ class OrganizationService {
 }
 
 export const organizationService = new OrganizationService();
+export type { Organization, OrganizationUnitDto };
