@@ -15,6 +15,8 @@ import type {
   UserDto,
   UserRoleDto,
 } from "@/features/users/services/users.service";
+import { PositionName, AreaName} from "./UserFundationInfo";
+import { useAuthStore } from "@/features/auth/store/auth.store";
 
 interface UsersTableProps {
   items: UserDto[];
@@ -41,6 +43,7 @@ export function UsersTable({
   onDelete,
   isToggling = false,
 }: UsersTableProps) {
+  const auth = useAuthStore();
   return (
     <>
       <div className="rounded-lg border bg-card">
@@ -84,20 +87,23 @@ export function UsersTable({
               </TableRow>
             ) : (
               items.map((user) => {
-                const userRoles = user.id ? userRolesMap[user.id] ?? [] : [];
-                const roleNames = userRoles
-                  .filter((r) => r.enabled && r.roleName)
-                  .map((r) => r.roleName!);
-                return (
-                  <UsersTableRow
-                    key={user.id ?? user.email ?? ""}
-                    user={user}
-                    roleNames={roleNames}
-                    onEdit={onEdit}
-                    onToggleActive={onToggleActive}
-                    onDelete={onDelete}
-                    isToggling={isToggling}
-                  />
+              const userRoles = user.id ? userRolesMap[user.id] ?? [] : [];
+              const roleNames = userRoles
+                .filter((r) => r.enabled && r.roleName)
+                .map((r) => r.roleName!);
+              return (
+                <UsersTableRow
+                  key={user.id ?? user.email ?? ""}
+                  user={user}
+                  roleNames={roleNames}
+                  // 🆕 PASAMOS LOS COMPONENTES DE RESOLUCIÓN AQUÍ:
+                  positionContent={<PositionName id={user.positionId} auth={auth} />}
+                  areaContent={<AreaName id={user.organizationUnitId} auth={auth} />}
+                  onEdit={onEdit}
+                  onToggleActive={onToggleActive}
+                  onDelete={onDelete}
+                  isToggling={isToggling}
+                />
                 );
               })
             )}

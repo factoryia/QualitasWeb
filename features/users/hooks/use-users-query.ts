@@ -1,3 +1,4 @@
+// features/users/hooks/use-users-query.ts
 "use client";
 
 import { useQuery, useQueries, useMutation, useQueryClient } from "@tanstack/react-query";
@@ -151,4 +152,48 @@ export function useUserAssignRolesMutation() {
       queryClient.invalidateQueries({ queryKey: usersKeys.roles(userId) });
     },
   });
+}
+
+export function useFullUserProfile() {
+  const auth = useAuth();
+  
+  // 1. Obtener datos básicos (perfil con IDs)
+  const userQuery = useQuery({
+    queryKey: ['users', 'profile', auth?.tenant],
+    queryFn: () => usersService.getProfile(auth),
+    enabled: !!auth,
+  });
+
+  const user = userQuery.data;
+
+  // 2. Resolver nombres en paralelo (Foundation)
+  const results = useQueries({
+    queries: [
+      {
+        queryKey: ['foundation', 'org', user?.organizationId],
+        queryFn: () => usersService.getOrganization(user!.organizationId, auth),
+        enabled: !!auth && !!user?.organizationId,
+      },
+      {
+        queryKey: ['foundation', 'area', user?.organizationUnitId],
+        queryFn: () => usersService.getArea(user!.organizationUnitId, auth),
+        enabled: !!auth && !!user?.organizationUnitId,
+      },
+      {
+        queryKey: ['foundation', 'position', user?.positionId],
+        queryFn: () => usersService.getPosition(user!.positionId, auth),
+        enabled: !!auth && !!user?.positionId,
+      },
+    ],
+  });
+
+  return {
+    user,
+    organization: results[0].data,
+    area: results[1].data,
+    position: results[2].data,
+    // Estado de carga unificado
+    isLoading: userQuery.isLoading || results.some(r => r.isLoading),
+    isError: userQuery.isError || results.some(r => r.isError),
+  };
 }

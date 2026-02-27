@@ -1,3 +1,4 @@
+// features/users/services/users.service.ts
 import { api } from "@/services/axios";
 
 export interface UserImage {
@@ -11,11 +12,18 @@ export interface UserDto {
   userName: string | null;
   firstName: string | null;
   lastName: string | null;
-  email: string | null;
+  email: string;
   isActive: boolean;
   emailConfirmed: boolean;
   phoneNumber: string | null;
   imageUrl: string | null;
+  
+  // ⭐ NUEVOS CAMPOS REQUERIDOS (Guía 2026)
+  organizationId: string;      // UUID
+  organizationUnitId: string;  // UUID
+  positionId: string;          // UUID
+  startDate: string;           // Fecha de ingreso
+  phoneNumberSecondary?: string; // Teléfono opcional
 }
 
 export interface PagedResponseOfUserDto {
@@ -240,4 +248,16 @@ export const usersService = {
       { ...(authHeaders(auth) && { headers: authHeaders(auth) }) }
     );
   },
+// Métodos para obtener datos relacionados (organización, área, cargo) - asumiendo que existen en el backend
+getOrganization: (id: string, auth?: AuthHeaders) => 
+  api.get(`/api/v1/qualitas/foundation/organizations/${id}`, { headers: authHeaders(auth) }).then(r => r.data),
+
+getArea: (id: string, auth?: AuthHeaders) => 
+  api.get(`/api/v1/qualitas/foundation/organization-units/${id}`, { headers: authHeaders(auth) }).then(r => r.data),
+
+getPosition: (id: string, auth?: AuthHeaders) => 
+  api.get(`/api/v1/qualitas/foundation/positions/${id}`, { headers: authHeaders(auth) }).then(r => r.data),
+  
 };
+
+

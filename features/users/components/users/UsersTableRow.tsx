@@ -20,6 +20,8 @@ import type { UserDto } from "@/features/users/services/users.service";
 interface UsersTableRowProps {
   user: UserDto;
   roleNames: string[];
+  positionContent: React.ReactNode; 
+  areaContent: React.ReactNode;
   onEdit: (user: UserDto) => void;
   onToggleActive: (user: UserDto) => void;
   onDelete: (user: UserDto) => void;
@@ -51,6 +53,8 @@ function getFullName(user: UserDto): string {
 export function UsersTableRow({
   user,
   roleNames,
+  positionContent, // 🆕 Desestructurar
+  areaContent, // 🆕 Desestructurar
   onEdit,
   onToggleActive,
   onDelete,
@@ -79,10 +83,18 @@ export function UsersTableRow({
           </div>
         </div>
       </TableCell>
-      <TableCell className="text-sm text-muted-foreground">—</TableCell>
-      <TableCell>
-        <span className="text-sm text-muted-foreground">—</span>
-      </TableCell>
+        <TableCell>
+          <div className="text-xs font-medium">
+            {positionContent}
+          </div>
+        </TableCell>
+
+        {/* 3. ÁREA (NUEVO) */}
+        <TableCell>
+          <div className="text-xs text-muted-foreground">
+            {areaContent}
+          </div>
+        </TableCell>
       <TableCell>
         {roleNames.length > 0 ? (
           <div className="flex flex-wrap gap-1">
