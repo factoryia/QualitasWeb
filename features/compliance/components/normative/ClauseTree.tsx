@@ -23,10 +23,10 @@ export function ClauseTree({
   onEditClause,
   onAddCriterio,
 }: Props) {
-  const children = allClauses.filter((c) => c.clausulaPadreId === clause.id);
+  const children = allClauses.filter((c) => c.parentRequirementId === clause.id);
   const hasChildren = children.length > 0;
   const clauseCriteria = criteria.filter(
-    (c) => c.clausulaRequisitoId === clause.id
+    (c) => c.requirementId === clause.id
   );
 
   return (
@@ -47,7 +47,7 @@ export function ClauseTree({
               depth === 0 ? "text-primary font-bold" : "text-muted-foreground"
             )}
           >
-            {clause.numeroClausula}
+            {clause.clauseNumber}
           </span>
           <span
             className={cn(
@@ -55,10 +55,10 @@ export function ClauseTree({
               depth === 0 && "font-semibold"
             )}
           >
-            {clause.titulo}
+            {clause.title}
           </span>
 
-          {clause.esAuditable && (
+          {clause.isAuditable && (
             <Badge className="text-[10px] uppercase shrink-0 bg-amber-50 text-amber-600 border-amber-200 hover:bg-amber-100 gap-1">
               <FileCheck className="h-3 w-3" />
               Auditable
@@ -109,7 +109,7 @@ export function ClauseTree({
                     key={crit.id}
                     className="text-xs text-muted-foreground list-disc"
                   >
-                    {crit.descripcion}
+                    {crit.description}
                   </li>
                 ))}
               </ul>

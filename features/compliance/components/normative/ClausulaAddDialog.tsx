@@ -28,12 +28,12 @@ interface Props {
   marcoNormativoId: string;
   existingClauses: ClausulaRequisitoDto[];
   onSubmit: (data: {
-    numeroClausula: string;
-    titulo: string;
-    tipoRequisito: string;
-    esAuditable: boolean;
-    clausulaPadreId: string | null;
-    descripcion: string | null;
+    clauseNumber: string;
+    title: string;
+    requirementType: string;
+    isAuditable: boolean;
+    parentRequirementId: string | null;
+    description: string | null;
   }) => void | Promise<void>;
   saving: boolean;
 }
@@ -54,35 +54,35 @@ export function ClausulaAddDialog({
   onSubmit,
   saving,
 }: Props) {
-  const [numeroClausula, setNumeroClausula] = useState("");
-  const [titulo, setTitulo] = useState("");
-  const [tipoRequisito, setTipoRequisito] = useState("Requisito");
-  const [esAuditable, setEsAuditable] = useState(true);
-  const [clausulaPadreId, setClausulaPadreId] = useState<string>("None");
-  const [descripcion, setDescripcion] = useState("");
+  const [clauseNumber, setClauseNumber] = useState("");
+  const [title, setTitle] = useState("");
+  const [requirementType, setRequirementType] = useState("Requisito");
+  const [isAuditable, setIsAuditable] = useState(true);
+  const [parentRequirementId, setParentRequirementId] = useState<string>("None");
+  const [description, setDescription] = useState("");
 
   useEffect(() => {
     if (open) {
-      setNumeroClausula("");
-      setTitulo("");
-      setTipoRequisito("Requisito");
-      setEsAuditable(true);
-      setClausulaPadreId("None");
-      setDescripcion("");
+      setClauseNumber("");
+      setTitle("");
+      setRequirementType("Requisito");
+      setIsAuditable(true);
+      setParentRequirementId("None");
+      setDescription("");
     }
   }, [open]);
 
-  const rootClauses = existingClauses.filter((c) => !c.clausulaPadreId);
+  const rootClauses = existingClauses.filter((c) => !c.parentRequirementId);
 
   const handleSubmit = () => {
-    if (!numeroClausula.trim() || !titulo.trim()) return;
+    if (!clauseNumber.trim() || !title.trim()) return;
     onSubmit({
-      numeroClausula: numeroClausula.trim(),
-      titulo: titulo.trim(),
-      tipoRequisito: tipoRequisito.trim() || "Requisito",
-      esAuditable,
-      clausulaPadreId: clausulaPadreId === "none" ? null : clausulaPadreId,
-      descripcion: descripcion.trim() || null,
+      clauseNumber: clauseNumber.trim(),
+      title: title.trim(),
+      requirementType: requirementType.trim() || "Requisito",
+      isAuditable,
+      parentRequirementId: parentRequirementId === "none" ? null : parentRequirementId,
+      description: description.trim() || null,
     });
   };
 
@@ -96,22 +96,22 @@ export function ClausulaAddDialog({
           <div className="space-y-2">
             <Label>Número de cláusula</Label>
             <Input
-              value={numeroClausula}
-              onChange={(e) => setNumeroClausula(e.target.value)}
+              value={clauseNumber}
+              onChange={(e) => setClauseNumber(e.target.value)}
               placeholder="Ej: 8.3"
             />
           </div>
           <div className="space-y-2">
             <Label>Título</Label>
             <Input
-              value={titulo}
-              onChange={(e) => setTitulo(e.target.value)}
+              value={title}
+              onChange={(e) => setTitle(e.target.value)}
               placeholder="Ej: Diseño y desarrollo de los productos y servicios"
             />
           </div>
           <div className="space-y-2">
             <Label>Tipo de requisito</Label>
-            <Select value={tipoRequisito} onValueChange={setTipoRequisito}>
+            <Select value={requirementType} onValueChange={setRequirementType}>
               <SelectTrigger>
                 <SelectValue />
               </SelectTrigger>
@@ -127,7 +127,7 @@ export function ClausulaAddDialog({
           {rootClauses.length > 0 && (
             <div className="space-y-2">
               <Label>Cláusula padre (opcional)</Label>
-              <Select value={clausulaPadreId} onValueChange={setClausulaPadreId}>
+              <Select value={parentRequirementId} onValueChange={setParentRequirementId}>
                 <SelectTrigger>
                   <SelectValue placeholder="Ninguna (raíz)" />
                 </SelectTrigger>
@@ -135,7 +135,7 @@ export function ClausulaAddDialog({
                   <SelectItem value="none">Ninguna (raíz)</SelectItem>
                   {rootClauses.map((c) => (
                     <SelectItem key={c.id} value={c.id}>
-                      {c.numeroClausula} — {c.titulo}
+                      {c.clauseNumber} — {c.title}
                     </SelectItem>
                   ))}
                 </SelectContent>
@@ -144,13 +144,13 @@ export function ClausulaAddDialog({
           )}
           <div className="flex items-center justify-between">
             <Label>Es auditable</Label>
-            <Switch checked={esAuditable} onCheckedChange={setEsAuditable} />
+            <Switch checked={isAuditable} onCheckedChange={setIsAuditable} />
           </div>
           <div className="space-y-2">
             <Label>Descripción (opcional)</Label>
             <Textarea
-              value={descripcion}
-              onChange={(e) => setDescripcion(e.target.value)}
+              value={description}
+              onChange={(e) => setDescription(e.target.value)}
               placeholder="Descripción del requisito..."
               rows={2}
             />
@@ -161,7 +161,7 @@ export function ClausulaAddDialog({
             Cancelar
           </Button>
           <Button
-            disabled={saving || !numeroClausula.trim() || !titulo.trim()}
+            disabled={saving || !clauseNumber.trim() || !title.trim()}
             onClick={handleSubmit}
           >
             {saving ? "Guardando..." : "Agregar"}

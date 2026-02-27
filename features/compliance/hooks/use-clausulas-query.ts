@@ -40,7 +40,7 @@ export function useClausulasByMarcoQuery(marcoId: string | null) {
       if (!marcoId) return [];
       if (isMockMarcoId(marcoId)) {
         const { clausulas } = getMockClausulasYCriterios(marcoId);
-        return clausulas.filter((c) => c.esAuditable);
+        return clausulas.filter((c) => c.isAuditable);
       }
       try {
         const list = await complianceService.getAllClausulasRequisitos(
@@ -48,10 +48,10 @@ export function useClausulasByMarcoQuery(marcoId: string | null) {
           marcoId,
           auth
         );
-        return list.filter((c) => c.esAuditable);
+        return list.filter((c) => c.isAuditable);
       } catch {
         const { clausulas } = getMockClausulasYCriterios(marcoId);
-        return clausulas.filter((c) => c.esAuditable);
+        return clausulas.filter((c) => c.isAuditable);
       }
     },
     enabled: !!marcoId,
@@ -107,12 +107,18 @@ export function useClausulaCreateMutation() {
       complianceService.createClausulaRequisito(payload, auth),
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: clausulasKeys.all });
-      queryClient.invalidateQueries({
-        queryKey: clausulasKeys.detail(variables.marcoNormativoId),
-      });
-      queryClient.invalidateQueries({
-        queryKey: clausulasKeys.byMarco(variables.marcoNormativoId),
-      });
+      // payload doesn't have a dedicated marcoNormativoId field; the
+      // framework is passed in regulatoryFrameworkIds array (index 0).
+      const marcoId =
+        variables.regulatoryFrameworkIds && variables.regulatoryFrameworkIds[0];
+      if (marcoId) {
+        queryClient.invalidateQueries({
+          queryKey: clausulasKeys.detail(marcoId),
+        });
+        queryClient.invalidateQueries({
+          queryKey: clausulasKeys.byMarco(marcoId),
+        });
+      }
     },
   });
 }

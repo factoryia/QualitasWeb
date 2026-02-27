@@ -76,8 +76,8 @@ export default function CumplimientoPage() {
       const decl = declarations[c.id] ?? defaultDeclaration();
       return {
         id: c.id,
-        number: c.numeroClausula,
-        title: c.titulo,
+        number: c.clauseNumber,
+        title: c.title,
         ...decl,
       };
     });
@@ -100,7 +100,7 @@ export default function CumplimientoPage() {
   }, [rows, search, statusFilter]);
 
   const selectedFrameworkName =
-    frameworks.find((f) => f.id === selectedFrameworkId)?.nombre ?? "";
+    frameworks.find((f) => f.id === selectedFrameworkId)?.name ?? "";
 
   const handleRowClick = (row: ClauseRow) => {
     setSelectedClause(row);
@@ -171,7 +171,7 @@ export default function CumplimientoPage() {
             <SelectContent>
               {frameworks.map((f) => (
                 <SelectItem key={f.id} value={f.id}>
-                  {f.codigo || f.nombre}
+                  {f.code || f.name}
                 </SelectItem>
               ))}
             </SelectContent>

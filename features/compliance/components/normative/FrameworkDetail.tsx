@@ -93,36 +93,35 @@ export function FrameworkDetail({ frameworkId, marco, onDeleted }: Props) {
   };
 
   const handleAddClause = async (formData: {
-    numeroClausula: string;
-    titulo: string;
-    tipoRequisito: string;
-    esAuditable: boolean;
-    clausulaPadreId: string | null;
-    descripcion: string | null;
+    clauseNumber: string;
+    title: string;
+    requirementType: string;
+    isAuditable: boolean;
+    parentRequirementId: string | null;
+    description: string | null;
   }) => {
     if (!marco) return;
     try {
       const created = await createClauseMutation.mutateAsync({
-        marcoNormativoId: marco.id,
-        numeroClausula: formData.numeroClausula,
-        titulo: formData.titulo,
-        tipoRequisito: formData.tipoRequisito,
-        esAuditable: formData.esAuditable,
-        clausulaPadreId: formData.clausulaPadreId,
-        descripcion: formData.descripcion,
+        regulatoryFrameworkIds: [marco.id],
+        clauseNumber: formData.clauseNumber,
+        title: formData.title,
+        requirementType: formData.requirementType,
+        isAuditable: formData.isAuditable,
+        parentRequirementId: formData.parentRequirementId,
+        description: formData.description,
       });
       if (created) setAddClauseOpen(false);
     } catch {
       // toast en servicio
     }
   };
-
   const handleEditClause = async (formData: {
-    titulo: string;
-    tipoRequisito: string;
-    esAuditable: boolean;
-    clausulaPadreId: string | null;
-    descripcion: string | null;
+    title: string;
+    requirementType: string;
+    isAuditable: boolean;
+    parentRequirementId: string | null;
+    description: string | null;
   }) => {
     if (!editingClause) return;
     try {
@@ -135,18 +134,17 @@ export function FrameworkDetail({ frameworkId, marco, onDeleted }: Props) {
       // toast en servicio
     }
   };
-
   const handleAddCriterio = async (formData: {
-    codigo: string;
-    descripcion: string;
-    tipoEvidencia: string;
-    frecuenciaVerificacion: string;
-    pesoPonderacion: number;
+    code: string;
+    description: string;
+    evidenceType: string;
+    verificationFrequency: string;
+    weight: number;
   }) => {
     if (!clauseForCriterio) return;
     try {
       const created = await createCriterioMutation.mutateAsync({
-        clausulaRequisitoId: clauseForCriterio.id,
+        requirementId: clauseForCriterio.id,
         ...formData,
       });
       if (created) setClauseForCriterio(null);
@@ -154,7 +152,6 @@ export function FrameworkDetail({ frameworkId, marco, onDeleted }: Props) {
       // toast en servicio
     }
   };
-
   const handleDeleteFramework = async () => {
     if (!deleteTarget) return;
     try {
@@ -182,7 +179,7 @@ export function FrameworkDetail({ frameworkId, marco, onDeleted }: Props) {
     return <FrameworkDetailSkeleton />;
   }
 
-  const rootClauses = clauses.filter((c) => !c.clausulaPadreId);
+  const rootClauses = clauses.filter((c) => !c.parentRequirementId);
 
   return (
     <>

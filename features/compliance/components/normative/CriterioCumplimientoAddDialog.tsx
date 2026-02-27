@@ -43,11 +43,11 @@ interface Props {
   onOpenChange: (open: boolean) => void;
   clause: ClausulaRequisitoDto | null;
   onSubmit: (data: {
-    codigo: string;
-    descripcion: string;
-    tipoEvidencia: string;
-    frecuenciaVerificacion: string;
-    pesoPonderacion: number;
+    code: string;
+    description: string;
+    evidenceType: string;
+    verificationFrequency: string;
+    weight: number;
   }) => void | Promise<void>;
   saving: boolean;
 }
@@ -59,32 +59,32 @@ export function CriterioCumplimientoAddDialog({
   onSubmit,
   saving,
 }: Props) {
-  const [codigo, setCodigo] = useState("");
-  const [descripcion, setDescripcion] = useState("");
-  const [tipoEvidencia, setTipoEvidencia] = useState("Documental");
-  const [frecuenciaVerificacion, setFrecuenciaVerificacion] = useState("Anual");
-  const [pesoPonderacion, setPesoPonderacion] = useState<string>("10");
+  const [code, setCode] = useState("");
+  const [description, setDescription] = useState("");
+  const [evidenceType, setEvidenceType] = useState("Documental");
+  const [verificationFrequency, setVerificationFrequency] = useState("Anual");
+  const [weight, setWeight] = useState<string>("10");
 
   useEffect(() => {
     if (open) {
-      setCodigo("");
-      setDescripcion("");
-      setTipoEvidencia("Documental");
-      setFrecuenciaVerificacion("Anual");
-      setPesoPonderacion("10");
+      setCode("");
+      setDescription("");
+      setEvidenceType("Documental");
+      setVerificationFrequency("Anual");
+      setWeight("10");
     }
   }, [open]);
 
   const handleSubmit = () => {
-    if (!descripcion.trim() || !clause) return;
-    const peso = Number.parseFloat(pesoPonderacion);
-    if (Number.isNaN(peso) || peso < 0) return;
+    if (!description.trim() || !clause) return;
+    const w = Number.parseFloat(weight);
+    if (Number.isNaN(w) || w < 0) return;
     onSubmit({
-      codigo: codigo.trim() || `C-${clause.numeroClausula}`,
-      descripcion: descripcion.trim(),
-      tipoEvidencia: tipoEvidencia.trim() || "Documental",
-      frecuenciaVerificacion: frecuenciaVerificacion.trim() || "Anual",
-      pesoPonderacion: peso,
+      code: code.trim() || `C-${clause.clauseNumber}`,
+      description: description.trim(),
+      evidenceType: evidenceType.trim() || "Documental",
+      verificationFrequency: verificationFrequency.trim() || "Anual",
+      weight: w,
     });
   };
 
@@ -96,30 +96,30 @@ export function CriterioCumplimientoAddDialog({
         <DialogHeader>
           <DialogTitle>Agregar Criterio de Cumplimiento</DialogTitle>
           <p className="text-sm text-muted-foreground">
-            Cláusula {clause.numeroClausula} — {clause.titulo}
+            Cláusula {clause.clauseNumber} — {clause.title}
           </p>
         </DialogHeader>
         <div className="space-y-4 py-2">
           <div className="space-y-2">
             <Label>Código (opcional)</Label>
             <Input
-              value={codigo}
-              onChange={(e) => setCodigo(e.target.value)}
+              value={code}
+              onChange={(e) => setCode(e.target.value)}
               placeholder="Ej: C1, 8.3.1"
             />
           </div>
           <div className="space-y-2">
             <Label>Descripción</Label>
             <Textarea
-              value={descripcion}
-              onChange={(e) => setDescripcion(e.target.value)}
+              value={description}
+              onChange={(e) => setDescription(e.target.value)}
               placeholder="Describa el criterio de cumplimiento..."
               rows={3}
             />
           </div>
           <div className="space-y-2">
             <Label>Tipo de evidencia</Label>
-            <Select value={tipoEvidencia} onValueChange={setTipoEvidencia}>
+            <Select value={evidenceType} onValueChange={setEvidenceType}>
               <SelectTrigger>
                 <SelectValue />
               </SelectTrigger>
@@ -135,8 +135,8 @@ export function CriterioCumplimientoAddDialog({
           <div className="space-y-2">
             <Label>Frecuencia de verificación</Label>
             <Select
-              value={frecuenciaVerificacion}
-              onValueChange={setFrecuenciaVerificacion}
+              value={verificationFrequency}
+              onValueChange={setVerificationFrequency}
             >
               <SelectTrigger>
                 <SelectValue />
@@ -156,8 +156,8 @@ export function CriterioCumplimientoAddDialog({
               type="number"
               min={0}
               max={100}
-              value={pesoPonderacion}
-              onChange={(e) => setPesoPonderacion(e.target.value)}
+              value={weight}
+              onChange={(e) => setWeight(e.target.value)}
               placeholder="10"
             />
           </div>
@@ -167,7 +167,7 @@ export function CriterioCumplimientoAddDialog({
             Cancelar
           </Button>
           <Button
-            disabled={saving || !descripcion.trim()}
+            disabled={saving || !description.trim()}
             onClick={handleSubmit}
           >
             {saving ? "Guardando..." : "Agregar criterio"}

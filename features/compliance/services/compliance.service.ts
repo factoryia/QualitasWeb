@@ -58,13 +58,14 @@ export interface UpdateMarcoNormativoCommand {
 
 export interface ClausulaRequisitoDto {
   id: string;
-  marcoNormativoId: string;
-  numeroClausula: string;
-  titulo: string;
-  tipoRequisito: string;
-  esAuditable: boolean;
-  clausulaPadreId: string | null;
-  descripcion: string | null;
+  regulatoryFrameworkIds: string[]; // when returned by API
+  parentRequirementId: string | null;
+  clauseNumber: string;
+  title: string;
+  description: string | null;
+  level?: number;
+  requirementType: string;
+  isAuditable: boolean;
   isActive?: boolean;
   createdOnUtc?: string | null;
   createdBy?: string | null;
@@ -73,33 +74,33 @@ export interface ClausulaRequisitoDto {
 }
 
 export interface CreateClausulaRequisitoCommand {
-  marcoNormativoId: string;
-  numeroClausula: string;
-  titulo: string;
-  tipoRequisito: string;
-  esAuditable: boolean;
-  clausulaPadreId?: string | null;
-  descripcion?: string | null;
+  regulatoryFrameworkIds: string[];
+  parentRequirementId?: string | null;
+  clauseNumber: string;
+  title: string;
+  requirementType: string;
+  isAuditable: boolean;
+  description?: string | null;
 }
 
 export interface UpdateClausulaRequisitoCommand {
-  titulo: string;
-  tipoRequisito: string;
-  esAuditable: boolean;
-  clausulaPadreId?: string | null;
-  descripcion?: string | null;
+  parentRequirementId?: string | null;
+  title: string;
+  requirementType: string;
+  isAuditable: boolean;
+  description?: string | null;
 }
 
 // --- Criterios de Cumplimiento ---
 
 export interface CriterioCumplimientoDto {
   id: string;
-  clausulaRequisitoId: string;
-  codigo: string;
-  descripcion: string;
-  tipoEvidencia: string;
-  frecuenciaVerificacion: string;
-  pesoPonderacion: number;
+  requirementId: string; // previously clausulaRequisitoId
+  code: string;
+  description: string;
+  evidenceType: string;
+  verificationFrequency: string;
+  weight: number;
   isActive?: boolean;
   createdOnUtc?: string | null;
   createdBy?: string | null;
@@ -108,19 +109,19 @@ export interface CriterioCumplimientoDto {
 }
 
 export interface CreateCriterioCumplimientoCommand {
-  clausulaRequisitoId: string;
-  codigo: string;
-  descripcion: string;
-  tipoEvidencia: string;
-  frecuenciaVerificacion: string;
-  pesoPonderacion: number;
+  requirementId: string;
+  code: string;
+  description: string;
+  evidenceType: string;
+  verificationFrequency: string;
+  weight: number;
 }
 
 export interface UpdateCriterioCumplimientoCommand {
-  descripcion: string;
-  tipoEvidencia: string;
-  frecuenciaVerificacion: string;
-  pesoPonderacion: number;
+  description: string;
+  evidenceType: string;
+  verificationFrequency: string;
+  weight: number;
 }
 
 const BASE = "/api/v1/qualitas/compliance";

@@ -31,11 +31,11 @@ const TIPOS_REQUISITO = [
 ];
 
 export interface ClausulaEditFormData {
-  titulo: string;
-  tipoRequisito: string;
-  esAuditable: boolean;
-  clausulaPadreId: string | null;
-  descripcion: string | null;
+  title: string;
+  requirementType: string;
+  isAuditable: boolean;
+  parentRequirementId: string | null;
+  description: string | null;
 }
 
 interface Props {
@@ -55,34 +55,34 @@ export function ClausulaEditDialog({
   onSubmit,
   saving,
 }: Props) {
-  const [titulo, setTitulo] = useState("");
-  const [tipoRequisito, setTipoRequisito] = useState("Requisito");
-  const [esAuditable, setEsAuditable] = useState(true);
-  const [clausulaPadreId, setClausulaPadreId] = useState<string>("");
-  const [descripcion, setDescripcion] = useState("");
+  const [title, setTitle] = useState("");
+  const [requirementType, setRequirementType] = useState("Requisito");
+  const [isAuditable, setIsAuditable] = useState(true);
+  const [parentRequirementId, setParentRequirementId] = useState<string>("");
+  const [description, setDescription] = useState("");
 
   useEffect(() => {
     if (clause && open) {
-      setTitulo(clause.titulo);
-      setTipoRequisito(clause.tipoRequisito || "Requisito");
-      setEsAuditable(clause.esAuditable);
-      setClausulaPadreId(clause.clausulaPadreId ?? "");
-      setDescripcion(clause.descripcion ?? "");
+      setTitle(clause.title);
+      setRequirementType(clause.requirementType || "Requisito");
+      setIsAuditable(clause.isAuditable);
+      setParentRequirementId(clause.parentRequirementId ?? "");
+      setDescription(clause.description ?? "");
     }
   }, [clause, open]);
 
   const rootClauses = existingClauses.filter(
-    (c) => !c.clausulaPadreId && c.id !== clause?.id
+    (c) => !c.parentRequirementId && c.id !== clause?.id
   );
 
   const handleSubmit = () => {
-    if (!titulo.trim()) return;
+    if (!title.trim()) return;
     onSubmit({
-      titulo: titulo.trim(),
-      tipoRequisito: tipoRequisito.trim() || "Requisito",
-      esAuditable,
-      clausulaPadreId: clausulaPadreId || null,
-      descripcion: descripcion.trim() || null,
+      title: title.trim(),
+      requirementType: requirementType.trim() || "Requisito",
+      isAuditable,
+      parentRequirementId: parentRequirementId || null,
+      description: description.trim() || null,
     });
   };
 
@@ -92,24 +92,24 @@ export function ClausulaEditDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-lg">
         <DialogHeader>
-          <DialogTitle>Editar Cláusula — {clause.numeroClausula}</DialogTitle>
+          <DialogTitle>Editar Cláusula — {clause.clauseNumber}</DialogTitle>
         </DialogHeader>
         <div className="space-y-4 py-2">
           <div className="space-y-2">
             <Label>Número (solo lectura)</Label>
-            <Input value={clause.numeroClausula} readOnly className="bg-muted" />
+            <Input value={clause.clauseNumber} readOnly className="bg-muted" />
           </div>
           <div className="space-y-2">
             <Label>Título</Label>
             <Input
-              value={titulo}
-              onChange={(e) => setTitulo(e.target.value)}
+              value={title}
+              onChange={(e) => setTitle(e.target.value)}
               placeholder="Título del requisito"
             />
           </div>
           <div className="space-y-2">
             <Label>Tipo de requisito</Label>
-            <Select value={tipoRequisito} onValueChange={setTipoRequisito}>
+            <Select value={requirementType} onValueChange={setRequirementType}>
               <SelectTrigger>
                 <SelectValue />
               </SelectTrigger>
@@ -125,7 +125,7 @@ export function ClausulaEditDialog({
           {rootClauses.length > 0 && (
             <div className="space-y-2">
               <Label>Cláusula padre (opcional)</Label>
-              <Select value={clausulaPadreId} onValueChange={setClausulaPadreId}>
+              <Select value={parentRequirementId} onValueChange={setParentRequirementId}>
                 <SelectTrigger>
                   <SelectValue placeholder="Ninguna (raíz)" />
                 </SelectTrigger>
@@ -133,7 +133,7 @@ export function ClausulaEditDialog({
                   <SelectItem value="">Ninguna (raíz)</SelectItem>
                   {rootClauses.map((c) => (
                     <SelectItem key={c.id} value={c.id}>
-                      {c.numeroClausula} — {c.titulo}
+                      {c.clauseNumber} — {c.title}
                     </SelectItem>
                   ))}
                 </SelectContent>
@@ -142,13 +142,13 @@ export function ClausulaEditDialog({
           )}
           <div className="flex items-center justify-between">
             <Label>Es auditable</Label>
-            <Switch checked={esAuditable} onCheckedChange={setEsAuditable} />
+            <Switch checked={isAuditable} onCheckedChange={setIsAuditable} />
           </div>
           <div className="space-y-2">
             <Label>Descripción (opcional)</Label>
             <Textarea
-              value={descripcion}
-              onChange={(e) => setDescripcion(e.target.value)}
+              value={description}
+              onChange={(e) => setDescription(e.target.value)}
               placeholder="Descripción del requisito..."
               rows={2}
             />
@@ -159,7 +159,7 @@ export function ClausulaEditDialog({
             Cancelar
           </Button>
           <Button
-            disabled={saving || !titulo.trim()}
+            disabled={saving || !title.trim()}
             onClick={handleSubmit}
           >
             {saving ? "Guardando..." : "Guardar"}
