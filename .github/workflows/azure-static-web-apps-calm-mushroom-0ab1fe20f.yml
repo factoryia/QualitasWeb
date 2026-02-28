@@ -27,7 +27,15 @@ jobs:
           cache: 'npm'
       
       - name: Install dependencies with optional packages
-        run: npm ci --include=optional
+        run: |
+          npm ci --include=optional
+          npm install --no-save lightningcss-linux-x64-gnu@1.30.2
+      
+      - name: Debug - Check lightningcss installation
+        run: |
+          echo "Checking lightningcss installation..."
+          ls -la node_modules/lightningcss* || echo "No lightningcss packages found"
+          npm list lightningcss lightningcss-linux-x64-gnu || echo "Packages not in tree"
       
       - name: Build application
         run: npm run build
