@@ -196,7 +196,8 @@ export function FrameworkDetail({ frameworkId, marco, onDeleted }: Props) {
               className="gap-1.5"
               onClick={() => setAddClauseOpen(true)}
             >
-              <Plus className="h-3.5 w-3.5" /> Agregar Cláusula
+              <Plus className="h-3.5 w-3.5" /> 
+              <span className="hidden sm:block"> Agregar Cláusula</span>
             </Button>
             <Button
               variant="ghost"
