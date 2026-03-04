@@ -20,6 +20,7 @@ import {
   CheckCircle2,
   ChevronDown,
   ChevronUp,
+  GitBranch,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -62,7 +63,10 @@ const SIDEBAR_SECTIONS: Array<{ title: string; items: SidebarItem[] }> = [
   {
     title: "Administración",
     items: [
-      { href: "/usuarios", label: "Usuarios", icon: Users, permission: null },
+      { href: "/usuarios", 
+        label: "Usuarios", 
+        icon: Users, 
+        permission: null },
       {
         href: "/organizacion",
         label: "Organización",
@@ -89,9 +93,23 @@ const SIDEBAR_SECTIONS: Array<{ title: string; items: SidebarItem[] }> = [
     ],
   },
   {
+    title: "Operación",
+    items: [
+      {
+        href: "/procesos",
+        label: "Procesos",
+        icon: GitBranch,
+        permission: null,
+      }
+    ],
+  },
+  {
     title: "Control",
     items: [
-      { href: "/auditoria", label: "Auditoría", icon: Zap, permission: null },
+      { href: "/auditoria", 
+        label: "Auditoría", 
+        icon: Zap, 
+        permission: null },
     ],
   },
 ] as const;

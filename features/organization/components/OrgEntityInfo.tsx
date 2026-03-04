@@ -163,13 +163,18 @@ export function OrgEntityInfo({ orgId }: Props) {
             </CardHeader>
             <CardContent>
               <dl className="space-y-3">
-                <Field label="Nombre de la Entidad" value={org.name} />
+                <div className="grid grid-cols-2 gap-4">
+                  <Field label="Nombre de la Entidad" value={org.name} />
+                  <Field label="Codigo" value={org.code} />
+                </div>
                 <div className="grid grid-cols-2 gap-4">
                   <Field label="NIT / Identificación" value={org.nit} />
                   <Field label="Sector" value={org.sector} />
                 </div>
-                <Field label="Slogan / Lema" value={org.slogan} icon={MessageSquareQuote} />
-                <Field label="Descripción / Misión Breve" value={org.description} icon={FileText} />
+                <div className="grid grid-cols-2 gap-4">
+                  <Field label="Tipo de Entidad" value={org.entity_type}></Field>
+                  <Field label="Descripción" value={org.description}></Field>
+                </div>
                 <Field label="Representante Legal" value={org.legal_representative} icon={User} />
               </dl>
             </CardContent>
