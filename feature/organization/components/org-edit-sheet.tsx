@@ -12,7 +12,10 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { organizationsApi, type UpdateOrganizationPayload } from "../api/organizations";
+import {
+  organizationsApi,
+  type UpdateOrganizationPayload,
+} from "../api/organizations";
 import { cn } from "@/lib/utils";
 
 export type OrganizationDetails = {
@@ -34,16 +37,22 @@ export type OrganizationDetails = {
 interface OrgEditSheetProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  organizationId: string;
-  organization: OrganizationDetails | null;
+  /** create = POST nueva organización (requiere tenant header en axios) */
+  mode?: "create" | "edit";
+  organizationId?: string | null;
+  organization?: OrganizationDetails | null;
+  /** En modo create: sugerencia para el código (ej. slug del tenant) */
+  defaultTenantCode?: string | null;
   onSaved: () => void;
 }
 
 export function OrgEditSheet({
   open,
   onOpenChange,
+  mode = "edit",
   organizationId,
   organization,
+  defaultTenantCode,
   onSaved,
 }: OrgEditSheetProps) {
   const [name, setName] = useState("");
@@ -61,7 +70,23 @@ export function OrgEditSheet({
   const [saveError, setSaveError] = useState<string | null>(null);
 
   useEffect(() => {
-    if (!open || !organization) return;
+    if (!open) return;
+    if (mode === "create") {
+      setName("");
+      setCode((defaultTenantCode ?? "").trim());
+      setNit("");
+      setSector("");
+      setEntityType("");
+      setDescription("");
+      setWebsite("");
+      setEmail("");
+      setPhone("");
+      setLogoUrl("");
+      setSlogan("");
+      setSaveError(null);
+      return;
+    }
+    if (!organization) return;
     setName(organization.name ?? "");
     setCode(organization.code ?? "");
     setNit(organization.nit ?? "");
@@ -74,7 +99,7 @@ export function OrgEditSheet({
     setLogoUrl(organization.logoUrl ?? "");
     setSlogan(organization.slogan ?? "");
     setSaveError(null);
-  }, [open, organization]);
+  }, [open, mode, organization, defaultTenantCode]);
 
   const handleSave = async () => {
     if (!name.trim()) {
@@ -83,6 +108,19 @@ export function OrgEditSheet({
     }
     if (!code.trim()) {
       setSaveError("El código es obligatorio.");
+      return;
+    }
+    if (
+      mode === "create" &&
+      (!nit.trim() || !sector.trim() || !entityType.trim())
+    ) {
+      setSaveError(
+        "NIT, sector y tipo de entidad son obligatorios al crear la organización.",
+      );
+      return;
+    }
+    if (mode === "edit" && !organizationId) {
+      setSaveError("Falta el identificador de la organización.");
       return;
     }
     setSaveError(null);
@@ -102,7 +140,11 @@ export function OrgEditSheet({
         slogan: slogan.trim() || null,
         legalRepId: null,
       };
-      await organizationsApi.update(organizationId, payload);
+      if (mode === "create") {
+        await organizationsApi.create(payload);
+      } else {
+        await organizationsApi.update(organizationId!, payload);
+      }
       onSaved();
       onOpenChange(false);
     } catch {
@@ -119,9 +161,15 @@ export function OrgEditSheet({
         className={cn("flex flex-col sm:max-w-md overflow-y-auto")}
       >
         <SheetHeader>
-          <SheetTitle>Editar Información Institucional</SheetTitle>
+          <SheetTitle>
+            {mode === "create"
+              ? "Nueva organización"
+              : "Editar Información Institucional"}
+          </SheetTitle>
           <SheetDescription>
-            Modifica los datos de la entidad. El logo se configura con la URL de la imagen (recomendado PNG 500×500px).
+            {mode === "create"
+              ? "Crea la organización de tu tenant. El código suele coincidir con el identificador del tenant (ej. epc). Luego podrás registrar sedes y unidades."
+              : "Modifica los datos de la entidad. El logo se configura con la URL de la imagen (recomendado PNG 500×500px)."}
           </SheetDescription>
         </SheetHeader>
 
@@ -146,7 +194,7 @@ export function OrgEditSheet({
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="org-nit">NIT / Identificación</Label>
+              <Label htmlFor="org-nit">NIT / Identificación *</Label>
               <Input
                 id="org-nit"
                 value={nit}
@@ -156,7 +204,7 @@ export function OrgEditSheet({
             </div>
           </div>
           <div className="space-y-2">
-            <Label htmlFor="org-entity-type">Tipo de Entidad</Label>
+            <Label htmlFor="org-entity-type">Tipo de Entidad *</Label>
             <Input
               id="org-entity-type"
               value={entityType}
@@ -165,7 +213,7 @@ export function OrgEditSheet({
             />
           </div>
           <div className="space-y-2">
-            <Label htmlFor="org-sector">Sector</Label>
+            <Label htmlFor="org-sector">Sector *</Label>
             <Input
               id="org-sector"
               value={sector}
@@ -247,7 +295,11 @@ export function OrgEditSheet({
             Cancelar
           </Button>
           <Button type="button" onClick={handleSave} disabled={saving}>
-            {saving ? "Guardando…" : "Guardar"}
+            {saving
+              ? "Guardando…"
+              : mode === "create"
+                ? "Crear organización"
+                : "Guardar"}
           </Button>
         </SheetFooter>
       </SheetContent>

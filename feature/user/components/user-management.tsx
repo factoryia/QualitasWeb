@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useMemo } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import type {
   GroupDto,
   OrganizationUnitDto,
@@ -18,11 +18,13 @@ import { positionsApi } from "../api/positions";
 import { UserFormSheet } from "./user-form-sheet";
 import { groupsApi } from "../api/groups";
 import { RoleFormSheet } from "./role-form-sheet";
+import { RolePermissionsDisplay } from "./role-permissions-display";
 import { GroupFormSheet } from "./group-form-sheet";
 
 type TabKey = "users" | "roles" | "groups";
 
 export function UserManagement() {
+  const queryClient = useQueryClient();
   const [activeTab, setActiveTab] = useState<TabKey>("users");
   const [page, setPage] = useState(1);
   const [search, setSearch] = useState("");
@@ -94,6 +96,19 @@ export function UserManagement() {
       items,
     };
   }, [data, selectedOrganizationUnitId]);
+
+  const activeRolesTabRole = useMemo(() => {
+    if (activeTab !== "roles" || !roles?.length) return null;
+    return selectedRole ?? roles[0] ?? null;
+  }, [activeTab, roles, selectedRole]);
+
+  const { data: roleDetailForPanel, isLoading: loadingRolePanelPerms } =
+    useQuery({
+      queryKey: ["identity", "role-permissions", activeRolesTabRole?.id],
+      queryFn: () => rolesApi.getRolePermissions(activeRolesTabRole!.id),
+      enabled: !!activeRolesTabRole?.id && activeTab === "roles",
+      staleTime: 30 * 1000,
+    });
 
   const handleTabChange = (tab: TabKey) => {
     setActiveTab(tab);
@@ -323,18 +338,23 @@ export function UserManagement() {
                     }
 
                     const activeRole = selectedRole ?? roles[0];
-                    const perms = activeRole.permissions ?? [];
+                    const perms =
+                      roleDetailForPanel?.permissions ??
+                      activeRole.permissions ??
+                      [];
 
                     return (
                       <div className="space-y-4">
                         <div className="flex items-start justify-between gap-4">
                           <div>
                             <h2 className="text-base font-semibold">
-                              {activeRole.name}
+                              {roleDetailForPanel?.name ?? activeRole.name}
                             </h2>
-                            {activeRole.description && (
+                            {(roleDetailForPanel?.description ??
+                              activeRole.description) && (
                               <p className="mt-1 text-xs text-muted-foreground">
-                                {activeRole.description}
+                                {roleDetailForPanel?.description ??
+                                  activeRole.description}
                               </p>
                             )}
                           </div>
@@ -374,7 +394,12 @@ export function UserManagement() {
                           <h3 className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
                             Permisos asignados
                           </h3>
-                          {perms.length === 0 && (
+                          {loadingRolePanelPerms && perms.length === 0 && (
+                            <div className="rounded-md border border-dashed border-border/70 bg-muted/40 p-3 text-xs text-muted-foreground">
+                              Cargando permisos del rol…
+                            </div>
+                          )}
+                          {!loadingRolePanelPerms && perms.length === 0 && (
                             <div className="rounded-md border border-dashed border-border/70 bg-muted/40 p-3 text-xs text-muted-foreground">
                               Este rol actualmente no tiene permisos asignados.
                               Puedes configurarlos editando el rol para
@@ -383,16 +408,7 @@ export function UserManagement() {
                             </div>
                           )}
                           {perms.length > 0 && (
-                            <div className="flex flex-wrap gap-1.5">
-                              {perms.map((p) => (
-                                <span
-                                  key={p}
-                                  className="inline-flex items-center rounded-full bg-muted px-2.5 py-0.5 text-[11px] font-medium text-muted-foreground"
-                                >
-                                  {p}
-                                </span>
-                              ))}
-                            </div>
+                            <RolePermissionsDisplay permissions={perms} />
                           )}
                         </div>
                       </div>
@@ -552,7 +568,13 @@ export function UserManagement() {
           mode={roleFormMode}
           onOpenChange={setIsRoleFormOpen}
           role={selectedRole}
-          onCompleted={() => {
+          onCompleted={async () => {
+            await queryClient.invalidateQueries({
+              queryKey: ["identity", "roles"],
+            });
+            await queryClient.invalidateQueries({
+              queryKey: ["identity", "role-permissions"],
+            });
             userSearchQuery.refetch();
           }}
         />

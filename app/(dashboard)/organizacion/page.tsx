@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import {
   FileText,
   MapPin,
@@ -9,12 +10,12 @@ import {
   Pencil,
   ImageIcon,
   Mail,
-  Phone,
-  Globe,
   MapPinned,
+  Building2,
 } from "lucide-react";
 import { useAuthStore } from "@/feature/auth/store/auth.store";
 import { api } from "@/lib/axios";
+import { organizationsApi } from "@/feature/organization/api/organizations";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -64,6 +65,7 @@ const TABS: { key: OrgTab; label: string; icon: React.ReactNode }[] = [
 ];
 
 export default function OrganizacionPage() {
+  const queryClient = useQueryClient();
   const [activeTab, setActiveTab] = useState<OrgTab>("informacion");
   const [organizationId, setOrganizationId] = useState<string | null>(null);
   const [organization, setOrganization] = useState<OrganizationDetails | null>(
@@ -74,23 +76,29 @@ export default function OrganizacionPage() {
   );
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [noOrganizationsInTenant, setNoOrganizationsInTenant] = useState(false);
   const [editSheetOpen, setEditSheetOpen] = useState(false);
+  const [createOrgOpen, setCreateOrgOpen] = useState(false);
 
   const user = useAuthStore((s) => s.user);
 
   const loadOrganization = useCallback(async () => {
     setIsLoading(true);
     setError(null);
+    setNoOrganizationsInTenant(false);
     try {
-      const { data: list } = await api.get<OrganizationDto[]>(
-        "/api/v1/qualitas/foundation/organizations",
-      );
+      const listRaw = await organizationsApi.list();
+      const list: OrganizationDto[] = listRaw.map((o) => ({
+        id: o.id,
+        code: o.code,
+        name: o.name,
+      }));
 
-      if (!Array.isArray(list) || list.length === 0) {
+      if (list.length === 0) {
         setOrganization(null);
         setOrganizationId(null);
         setHasPrincipalSede(null);
-        setError("No hay organizaciones configuradas para el tenant actual.");
+        setNoOrganizationsInTenant(true);
         return;
       }
 
@@ -144,11 +152,17 @@ export default function OrganizacionPage() {
       setOrganization(null);
       setOrganizationId(null);
       setHasPrincipalSede(null);
+      setNoOrganizationsInTenant(false);
       setError("No se pudo cargar la información de la organización.");
     } finally {
       setIsLoading(false);
     }
   }, [user?.tenant]);
+
+  const handleOrgSaved = useCallback(async () => {
+    await queryClient.invalidateQueries({ queryKey: ["organizations"] });
+    await loadOrganization();
+  }, [queryClient, loadOrganization]);
 
   useEffect(() => {
     loadOrganization();
@@ -284,6 +298,28 @@ export default function OrganizacionPage() {
               </div>
             )}
 
+            {!isLoading && !error && noOrganizationsInTenant && (
+              <div className="mt-4 rounded-lg border border-dashed border-border bg-muted/30 p-6 text-center">
+                <Building2 className="mx-auto mb-3 size-10 text-muted-foreground" />
+                <p className="text-sm font-medium text-foreground">
+                  Aún no hay organizaciones para este tenant
+                </p>
+                <p className="mt-2 text-sm text-muted-foreground">
+                  Crea la primera organización para poder editar datos, registrar
+                  sedes y usar el resto de pestañas. El{" "}
+                  <strong>código</strong> suele ser el mismo que tu tenant (
+                  {user?.tenant ?? "…"}).
+                </p>
+                <Button
+                  className="mt-4 gap-2"
+                  onClick={() => setCreateOrgOpen(true)}
+                >
+                  <Building2 className="size-4" />
+                  Crear organización
+                </Button>
+              </div>
+            )}
+
             {!isLoading && !error && organization && (
               <div className="grid gap-6 lg:grid-cols-5">
                 {/* Columna izquierda: Logo + Vista Previa PDF */}
@@ -413,21 +449,82 @@ export default function OrganizacionPage() {
         )}
 
         {activeTab === "sedes" && (
-          <SedesSection organizationId={organizationId} />
+          <div>
+            {!organizationId && !isLoading && noOrganizationsInTenant && (
+              <div className="border-b border-border bg-amber-500/10 px-6 py-3 text-sm text-amber-900 dark:text-amber-100">
+                Primero crea una organización en la pestaña{" "}
+                <button
+                  type="button"
+                  className="font-semibold underline"
+                  onClick={() => setActiveTab("informacion")}
+                >
+                  Información
+                </button>{" "}
+                para poder registrar sedes.
+              </div>
+            )}
+            <SedesSection organizationId={organizationId} />
+          </div>
         )}
 
-        {activeTab === "estructura" && <OrgStructureSection />}
+        {activeTab === "estructura" && (
+          <div>
+            {!organizationId && !isLoading && noOrganizationsInTenant && (
+              <div className="border-b border-border bg-amber-500/10 px-6 py-3 text-sm text-amber-900 dark:text-amber-100">
+                La estructura de cargos es global del tenant; si no ves datos,
+                revisa permisos. Para sedes y datos de entidad, crea antes la{" "}
+                <button
+                  type="button"
+                  className="font-semibold underline"
+                  onClick={() => setActiveTab("informacion")}
+                >
+                  organización
+                </button>
+                .
+              </div>
+            )}
+            <OrgStructureSection />
+          </div>
+        )}
 
-        {activeTab === "cargos" && <CargosSection />}
+        {activeTab === "cargos" && (
+          <div>
+            {!organizationId && !isLoading && noOrganizationsInTenant && (
+              <div className="border-b border-border bg-amber-500/10 px-6 py-3 text-sm text-amber-900 dark:text-amber-100">
+                Puedes crear cargos sin organización; si algo falla, completa
+                primero la pestaña{" "}
+                <button
+                  type="button"
+                  className="font-semibold underline"
+                  onClick={() => setActiveTab("informacion")}
+                >
+                  Información
+                </button>
+                .
+              </div>
+            )}
+            <CargosSection />
+          </div>
+        )}
       </div>
+
+      <OrgEditSheet
+        mode="create"
+        open={createOrgOpen}
+        onOpenChange={setCreateOrgOpen}
+        defaultTenantCode={user?.tenant ?? ""}
+        organization={null}
+        onSaved={handleOrgSaved}
+      />
 
       {organizationId && (
         <OrgEditSheet
+          mode="edit"
           open={editSheetOpen}
           onOpenChange={setEditSheetOpen}
           organizationId={organizationId}
           organization={organization}
-          onSaved={loadOrganization}
+          onSaved={handleOrgSaved}
         />
       )}
     </section>

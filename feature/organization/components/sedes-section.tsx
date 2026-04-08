@@ -88,6 +88,13 @@ export function SedesSection({ organizationId }: SedesSectionProps) {
 
   return (
     <div className="p-6">
+      {organizations.length === 0 && (
+        <div className="mb-4 rounded-md border border-dashed border-amber-500/40 bg-amber-500/10 px-3 py-2 text-xs text-amber-950 dark:text-amber-100">
+          No hay organizaciones registradas. Crea una en la pestaña{" "}
+          <strong>Información</strong> de Organización para habilitar{" "}
+          <strong>Nueva sede</strong>.
+        </div>
+      )}
       <div className="mb-4 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex flex-wrap items-center gap-3">
           <label htmlFor="sedes-org-filter" className="text-sm text-muted-foreground">
