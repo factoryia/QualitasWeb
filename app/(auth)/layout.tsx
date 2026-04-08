@@ -1,4 +1,4 @@
-import { GradientBubbles } from "@/features/auth/components/shared/gradient-bubbles";
+import { GradientBubbles } from "@/feature/auth/components/shared/gradient-bubbles";
 
 export default function Layout({ children }: { children: React.ReactNode }) {
   return (

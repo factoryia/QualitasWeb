@@ -5,15 +5,16 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { User, Lock, Phone, Mail, Camera, Trash2, Eye, EyeOff } from "lucide-react";
-import { useAuthStore } from "@/features/auth/store/auth.store";
-import { usersService, type UpdateUserRequest, type UserDto } from "@/features/users/services/users.service";
+import { useAuthStore } from "@/feature/auth/store/auth.store";
+import { usersApi } from "@/feature/user/api/users";
+import type { UpdateUserRequest, UserDto } from "@/feature/user/types";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
-import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
+import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from "@/components/ui/tooltip";
 
 const profileSchema = z.object({
   firstName: z.string().min(1, "El nombre es obligatorio").max(100),
@@ -33,18 +34,10 @@ const passwordSchema = z.object({
 type ProfileForm = z.infer<typeof profileSchema>;
 type PasswordForm = z.infer<typeof passwordSchema>;
 
-const authFromStore = () => {
-  const token = useAuthStore.getState().accessToken;
-  const tenant = useAuthStore.getState().user?.tenant ?? "root";
-  return token ? { accessToken: token, tenant } : undefined;
-};
-
 export default function ProfilePage() {
   const user = useAuthStore((s) => s.user);
-  const accessToken = useAuthStore((s) => s.accessToken);
-  const tenant = useAuthStore((s) => s.user?.tenant ?? "root");
+  const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
   const fileRef = useRef<HTMLInputElement>(null);
-  const auth = authFromStore();
 
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -69,13 +62,13 @@ export default function ProfilePage() {
   });
 
   useEffect(() => {
-    if (!auth) {
+    if (!isAuthenticated) {
       setLoading(false);
       return;
     }
     (async () => {
       try {
-        const data = await usersService.getProfile(auth);
+        const data = await usersApi.getProfile();
         setProfileData(data);
         profileForm.reset({
           firstName: data.firstName ?? "",
@@ -89,7 +82,7 @@ export default function ProfilePage() {
         setLoading(false);
       }
     })();
-  }, [accessToken, tenant]);
+  }, [isAuthenticated]);
 
   const initials = (() => {
     const f = profileForm.watch("firstName");
@@ -130,14 +123,14 @@ export default function ProfilePage() {
   };
 
   const onSaveProfile = async (data: ProfileForm) => {
-    if (!auth || !profileData?.id) return;
+    if (!profileData?.id) return;
     setSaving(true);
     setError("");
     try {
       let imageData: { fileName: string; contentType: string; data: number[] } | undefined;
 
       if (removeAvatar) {
-        // Delete avatar
+        // Delete avatar logic
       } else if (selectedFile) {
         const bytes = await fileToBase64(selectedFile);
         imageData = {
@@ -157,10 +150,10 @@ export default function ProfilePage() {
         deleteCurrentImage: removeAvatar,
       };
 
-      await usersService.updateProfile(updateData, auth);
+      await usersApi.updateProfile(updateData);
       
       // Recargar perfil para obtener imagen actualizada
-      const updated = await usersService.getProfile(auth);
+      const updated = await usersApi.getProfile();
       setProfileData(updated);
       setSelectedFile(null);
       setPreviewUrl(null);
@@ -184,10 +177,9 @@ export default function ProfilePage() {
 
   const onChangePassword = async (data: PasswordForm) => {
     setError("");
-    // TODO: Implementar cambio de contraseña cuando el endpoint esté disponible
     setChangingPw(true);
     try {
-      // Por ahora mostrar error ya que no hay endpoint específico para cambiar contraseña del perfil
+      // TODO: Implementar cambio de contraseña cuando el endpoint esté disponible
       setError("El cambio de contraseña no está disponible aún");
     } catch (err: unknown) {
       setError("Error al cambiar la contraseña");
@@ -205,11 +197,11 @@ export default function ProfilePage() {
   }
 
   return (
-    <div className="max-w-2xl mx-auto space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold text-foreground tracking-tight">Mi Perfil</h1>
-        <p className="text-sm text-muted-foreground mt-1">
-          Administra tu información personal y seguridad.
+    <div className="max-w-2xl mx-auto space-y-8 pb-10">
+      <div className="flex flex-col gap-1">
+        <h1 className="text-3xl font-extrabold text-foreground tracking-tight">Mi Perfil</h1>
+        <p className="text-muted-foreground">
+          Administra tu información personal, seguridad y preferencias de cuenta.
         </p>
       </div>
 
@@ -250,8 +242,8 @@ export default function ProfilePage() {
               </div>
             </div>
             <div className="space-y-1.5">
-              <Label htmlFor="phoneNumber" className="flex items-center gap-1.5">
-                <Phone className="h-3.5 w-3.5" /> Teléfono
+              <Label htmlFor="phoneNumber" className="flex items-center gap-2">
+                <Phone className="h-4 w-4 text-muted-foreground" /> Teléfono
               </Label>
               <Input
                 id="phoneNumber"
@@ -260,18 +252,20 @@ export default function ProfilePage() {
               />
             </div>
             <div className="space-y-1.5">
-              <Label className="flex items-center gap-1.5">
-                <Mail className="h-3.5 w-3.5" /> Correo electrónico
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <Lock className="h-3 w-3 text-muted-foreground cursor-help" />
-                  </TooltipTrigger>
-                  <TooltipContent className="max-w-[240px] text-xs">
-                    El email no se puede cambiar por seguridad. Contacta con soporte si necesitas
-                    actualizarlo.
-                  </TooltipContent>
-                </Tooltip>
-              </Label>
+              <TooltipProvider>
+                <Label className="flex items-center gap-2">
+                  <Mail className="h-4 w-4 text-muted-foreground" /> Correo electrónico
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Lock className="h-3.5 w-3.5 text-muted-foreground/60 cursor-help" />
+                    </TooltipTrigger>
+                    <TooltipContent className="max-w-[240px] text-xs">
+                      El email no se puede cambiar por seguridad. Contacta con soporte si necesitas
+                      actualizarlo.
+                    </TooltipContent>
+                  </Tooltip>
+                </Label>
+              </TooltipProvider>
               <Input
                 value={profileData?.email || user?.email || ""}
                 disabled
@@ -280,41 +274,45 @@ export default function ProfilePage() {
             </div>
 
             {/* Avatar Section */}
-            <div className="border-t border-border pt-4 mt-4">
-              <Label className="flex items-center gap-1.5 mb-3">
-                <Camera className="h-3.5 w-3.5" /> Foto de Perfil
+            <div className="border-t border-border pt-6 mt-6">
+              <Label className="flex items-center gap-2 mb-4 text-sm font-semibold">
+                <Camera className="h-4 w-4 text-muted-foreground" /> Foto de Perfil
               </Label>
-              <div className="flex items-center gap-4">
-                <Avatar className="h-16 w-16">
+              <div className="flex items-center gap-6">
+                <Avatar className="h-20 w-20 ring-2 ring-background shadow-sm">
                   {displayAvatar ? (
-                    <AvatarImage src={displayAvatar} alt="Avatar" />
+                    <AvatarImage src={displayAvatar} alt="Avatar" className="object-cover" />
                   ) : null}
-                  <AvatarFallback className="text-lg font-semibold bg-primary/10 text-primary">
+                  <AvatarFallback className="text-xl font-bold bg-primary/10 text-primary">
                     {initials}
                   </AvatarFallback>
                 </Avatar>
-                <div className="space-y-2">
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    onClick={() => fileRef.current?.click()}
-                  >
-                    Seleccionar imagen
-                  </Button>
-                  <input
-                    title="Seleccionar imagen de perfil"
-                    ref={fileRef}
-                    type="file"
-                    accept="image/jpeg,image/png"
-                    className="hidden"
-                    onChange={handleFileChange}
-                  />
+                <div className="space-y-3">
+                  <div className="flex flex-col gap-2">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      className="h-8 w-fit text-xs font-medium"
+                      onClick={() => fileRef.current?.click()}
+                    >
+                      Seleccionar imagen
+                    </Button>
+                    <input
+                      title="Seleccionar imagen de perfil"
+                      ref={fileRef}
+                      type="file"
+                      accept="image/jpeg,image/png"
+                      className="hidden"
+                      onChange={handleFileChange}
+                    />
+                  </div>
                   {(profileData?.imageUrl || previewUrl) && (
-                    <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-2.5">
                       <Checkbox
                         id="removeAvatar"
                         checked={removeAvatar}
+                        className="h-4 w-4 rounded border-muted-foreground/30 data-[state=checked]:bg-destructive data-[state=checked]:border-destructive"
                         onCheckedChange={(v) => {
                           setRemoveAvatar(!!v);
                           if (v) {
@@ -325,21 +323,22 @@ export default function ProfilePage() {
                       />
                       <Label
                         htmlFor="removeAvatar"
-                        className="text-xs text-muted-foreground cursor-pointer flex items-center gap-1"
+                        className="text-xs text-muted-foreground cursor-pointer flex items-center gap-1.5 hover:text-destructive transition-colors"
                       >
-                        <Trash2 className="h-3 w-3" /> Eliminar foto actual
+                        <Trash2 className="h-3.5 w-3.5" /> Eliminar foto actual
                       </Label>
                     </div>
                   )}
+                  <p className="text-[11px] text-muted-foreground leading-tight">
+                    Formatos: JPG o PNG. <br />
+                    Tamaño máximo: 2 MB.
+                  </p>
                 </div>
               </div>
-              <p className="text-[11px] text-muted-foreground mt-2">
-                JPG o PNG, máximo 2 MB.
-              </p>
             </div>
 
-            <div className="flex justify-end pt-2">
-              <Button type="submit" disabled={saving}>
+            <div className="flex justify-end pt-4">
+              <Button type="submit" disabled={saving} className="shadow-sm">
                 {saving ? "Guardando..." : "Guardar cambios"}
               </Button>
             </div>
@@ -353,22 +352,25 @@ export default function ProfilePage() {
           <CardTitle className="text-base flex items-center gap-2">
             <Lock className="h-4 w-4 text-amber-500" /> Cambiar Contraseña
           </CardTitle>
-          <CardDescription>Actualiza tu contraseña de acceso.</CardDescription>
+          <CardDescription>Actualiza tu contraseña de acceso para mantener tu cuenta segura.</CardDescription>
         </CardHeader>
         <CardContent>
-          <form onSubmit={pwForm.handleSubmit(onChangePassword)} className="space-y-4">
+          <form onSubmit={pwForm.handleSubmit(onChangePassword)} className="space-y-5">
             <div className="space-y-1.5">
-              <Label htmlFor="currentPassword">Contraseña actual</Label>
+              <Label htmlFor="currentPassword" title="Contraseña actual" className="flex items-center gap-2">
+                <Lock className="h-4 w-4 text-muted-foreground" /> Contraseña actual
+              </Label>
               <div className="relative">
                 <Input
                   id="currentPassword"
                   type={showCurPw ? "text" : "password"}
                   {...pwForm.register("currentPassword")}
                   placeholder="Ingresa tu contraseña actual"
+                  className="pr-10"
                 />
                 <button
                   type="button"
-                  className="absolute right-2.5 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground/60 hover:text-foreground transition-colors"
                   onClick={() => setShowCurPw((v) => !v)}
                 >
                   {showCurPw ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
@@ -381,17 +383,20 @@ export default function ProfilePage() {
               )}
             </div>
             <div className="space-y-1.5">
-              <Label htmlFor="newPassword">Nueva contraseña</Label>
+              <Label htmlFor="newPassword" title="Nueva contraseña" className="flex items-center gap-2">
+                <Lock className="h-4 w-4 text-muted-foreground" /> Nueva contraseña
+              </Label>
               <div className="relative">
                 <Input
                   id="newPassword"
                   type={showPw ? "text" : "password"}
                   {...pwForm.register("newPassword")}
                   placeholder="Mínimo 10 caracteres"
+                  className="pr-10"
                 />
                 <button
                   type="button"
-                  className="absolute right-2.5 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground/60 hover:text-foreground transition-colors"
                   onClick={() => setShowPw((v) => !v)}
                 >
                   {showPw ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
@@ -404,17 +409,20 @@ export default function ProfilePage() {
               )}
             </div>
             <div className="space-y-1.5">
-              <Label htmlFor="confirmPassword">Confirmar contraseña</Label>
+              <Label htmlFor="confirmPassword" title="Confirmar contraseña" className="flex items-center gap-2">
+                <Lock className="h-4 w-4 text-muted-foreground" /> Confirmar contraseña
+              </Label>
               <div className="relative">
                 <Input
                   id="confirmPassword"
                   type={showConfPw ? "text" : "password"}
                   {...pwForm.register("confirmPassword")}
                   placeholder="Repite la contraseña"
+                  className="pr-10"
                 />
                 <button
                   type="button"
-                  className="absolute right-2.5 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground/60 hover:text-foreground transition-colors"
                   onClick={() => setShowConfPw((v) => !v)}
                 >
                   {showConfPw ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
@@ -426,8 +434,8 @@ export default function ProfilePage() {
                 </p>
               )}
             </div>
-            <div className="flex justify-end">
-              <Button type="submit" disabled={changingPw} className="bg-amber-500 hover:bg-amber-600 text-white">
+            <div className="flex justify-end pt-2">
+              <Button type="submit" disabled={changingPw} className="bg-amber-500 hover:bg-amber-600 text-white shadow-sm">
                 {changingPw ? "Cambiando..." : "Cambiar contraseña"}
               </Button>
             </div>

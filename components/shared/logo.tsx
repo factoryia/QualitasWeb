@@ -4,7 +4,7 @@ export function Logo() {
   return (
     <div>
       <Image
-        src="/logo.svg"
+        src="/icon/logo.svg"
         alt="Qualitas logo"
         width={60}
         height={60}
