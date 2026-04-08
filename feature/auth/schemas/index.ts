@@ -6,10 +6,4 @@ export const loginSchema = z.object({
   tenant: z.string().min(1, { message: "El tenant es requerido" }),
 })
 
-export const tenantLoginSchema = z.object({
-  email: z.email({ message: "Correo electrónico inválido" }),
-  password: z.string().min(1, { message: "La contraseña es requerida" }),
-})
-
 export type LoginSchema = z.infer<typeof loginSchema>
-export type TenantLoginSchema = z.infer<typeof tenantLoginSchema>

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Loader2 } from "lucide-react";
@@ -17,14 +17,10 @@ import {
 import { Input } from "@/components/ui/input";
 import { authApi } from "../../api/auth";
 import { permissionsApi } from "../../api/permissions";
-import {
-  loginSchema,
-  LoginSchema,
-  tenantLoginSchema,
-  TenantLoginSchema,
-} from "../../schemas";
+import { loginSchema, LoginSchema } from "../../schemas";
 
 import { useRouter } from "next/navigation";
+import { readTenantSlug, rememberTenantSlug } from "../../lib/login-path";
 import { useAuthStore } from "../../store/auth.store";
 import { AuthLayout } from "../shared/auth-layout";
 
@@ -39,24 +35,34 @@ export function LoginForm({ tenant }: LoginFormProps) {
 
   const hasTenant = !!tenant;
 
-  const form = useForm<LoginSchema | TenantLoginSchema>({
-    resolver: zodResolver(hasTenant ? tenantLoginSchema : loginSchema),
-    defaultValues: hasTenant
-      ? { email: "", password: "" }
-      : { email: "", password: "", tenant: "" },
+  const form = useForm<LoginSchema>({
+    resolver: zodResolver(loginSchema),
+    defaultValues: {
+      email: "",
+      password: "",
+      tenant: tenant ?? "",
+    },
   });
 
-  async function onSubmit(values: LoginSchema | TenantLoginSchema) {
+  useEffect(() => {
+    if (hasTenant) return;
+    const fromStorage = readTenantSlug();
+    if (fromStorage) {
+      form.setValue("tenant", fromStorage);
+    }
+  }, [form, hasTenant]);
+
+  async function onSubmit(values: LoginSchema) {
     setIsLoading(true);
     setError("");
     try {
-      const resolvedTenant = hasTenant
-        ? tenant
-        : (values as LoginSchema).tenant;
+      const resolvedTenant = hasTenant ? tenant : values.tenant;
+
+      rememberTenantSlug(resolvedTenant);
 
       const response = await authApi.login(
         { email: values.email, password: values.password },
-        resolvedTenant,
+        resolvedTenant!,
       );
 
       if (!response?.accessToken || !response?.refreshToken) {
@@ -96,7 +102,7 @@ export function LoginForm({ tenant }: LoginFormProps) {
       description={
         hasTenant
           ? `Ingresa tus credenciales para ${tenant}`
-          : "Ingresa tus credenciales para acceder a tu cuenta"
+          : "Ingresa organización y credenciales para acceder a tu cuenta"
       }
     >
       <Form {...form}>

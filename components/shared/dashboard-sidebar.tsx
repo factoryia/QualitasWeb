@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import Image from "next/image";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import {
   LayoutDashboard,
   Users,
@@ -36,6 +36,7 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
+import { LOGIN_PATH, rememberTenantSlug } from "@/feature/auth/lib/login-path";
 import { useAuthStore } from "@/feature/auth/store/auth.store";
 
 type SidebarItem = {
@@ -106,6 +107,7 @@ export function DashboardSidebar({
   mobileOpen = false,
 }: DashboardSidebarProps) {
   const pathname = usePathname();
+  const router = useRouter();
   const logout = useAuthStore((s) => s.logout);
   const user = useAuthStore((s) => s.user);
   const [collapsed, setCollapsed] = useState(false);
@@ -322,7 +324,11 @@ export function DashboardSidebar({
             </DropdownMenuItem>
             <DropdownMenuSeparator />
             <DropdownMenuItem
-              onClick={logout}
+              onClick={() => {
+                rememberTenantSlug(user?.tenant);
+                logout();
+                router.push(LOGIN_PATH);
+              }}
               className="text-destructive focus:text-destructive flex items-center"
             >
               <LogOut className="h-4 w-4 mr-2" /> Cerrar sesión

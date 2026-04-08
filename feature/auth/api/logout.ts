@@ -1,3 +1,4 @@
+import { rememberTenantSlug } from "../lib/login-path";
 import { useAuthStore } from "../store/auth.store";
 
 /**
@@ -11,6 +12,8 @@ export const authSession = {
    */
   logout: async (): Promise<void> => {
     try {
+      rememberTenantSlug(useAuthStore.getState().user?.tenant);
+
       // 1. Limpiar store de auth
       useAuthStore.getState().logout();
 

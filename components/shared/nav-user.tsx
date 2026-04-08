@@ -14,9 +14,12 @@ import {
   SidebarMenuButton,
   SidebarMenuItem,
 } from "@/components/ui/sidebar";
+import { useRouter } from "next/navigation";
+import { LOGIN_PATH, rememberTenantSlug } from "@/feature/auth/lib/login-path";
 import { useAuthStore } from "@/feature/auth/store/auth.store";
 
 export function NavUser() {
+  const router = useRouter();
   const logout = useAuthStore((s) => s.logout);
   const user = useAuthStore((s) => s.user);
 
@@ -59,7 +62,11 @@ export function NavUser() {
             </DropdownMenuItem>
             <DropdownMenuSeparator />
             <DropdownMenuItem
-              onClick={logout}
+              onClick={() => {
+                rememberTenantSlug(user?.tenant);
+                logout();
+                router.push(LOGIN_PATH);
+              }}
               className="text-destructive focus:text-destructive flex items-center gap-2"
             >
               <LogOut className="h-4 w-4" /> Cerrar sesión

@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
+import { LOGIN_PATH } from "../../lib/login-path";
 import { useAuthStore } from "../../store/auth.store";
 
 interface AuthGuardProps {
@@ -27,9 +28,9 @@ export function AuthGuard({ children }: AuthGuardProps) {
       console.warn('[AUTH] Auth error detected from interceptor');
     }
 
-    // Si no está autenticado, redirigir al login
+    // Si no está autenticado, redirigir al login único
     if (!isAuthenticated || !accessToken) {
-      router.push("/login");
+      router.push(LOGIN_PATH);
     }
   }, [isMounted, isAuthenticated, accessToken, router]);
 
