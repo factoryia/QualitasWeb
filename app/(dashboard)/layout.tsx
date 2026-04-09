@@ -23,13 +23,20 @@ import {
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { CommandPalette } from "@/components/shared/command-palette";
 import { AppSidebar } from "@/components/shared/app-sidebar";
+import { useAuthStore } from "@/feature/auth/store/auth.store";
 
 const queryClient = new QueryClient();
 
-function getBreadcrumbs(pathname: string): { label: string; href?: string }[] {
+function getBreadcrumbs(
+  pathname: string,
+  tenant: string | null | undefined,
+): { label: string; href?: string }[] {
   const crumbs: { label: string; href?: string }[] = [{ label: "Inicio", href: "/" }];
 
-  if (pathname === "/") return [{ label: "Inicio", href: "/" }, { label: "Dashboard" }];
+  if (pathname === "/") {
+    if (tenant === "epc") return [{ label: "Inicio" }];
+    return [{ label: "Inicio", href: "/" }, { label: "Dashboard" }];
+  }
 
   if (pathname.startsWith("/usuarios")) {
     crumbs.push({ label: "Administración" });
@@ -75,8 +82,9 @@ function getBreadcrumbs(pathname: string): { label: string; href?: string }[] {
 
 function DashboardHeaderContent() {
   const pathname = usePathname();
+  const tenant = useAuthStore((s) => s.user?.tenant);
   const [cmdOpen, setCmdOpen] = useState(false);
-  const crumbs = getBreadcrumbs(pathname);
+  const crumbs = getBreadcrumbs(pathname, tenant);
 
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {

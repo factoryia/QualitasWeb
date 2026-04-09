@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import {
+  Building2,
   CheckCircle2,
   AlertTriangle,
   ClipboardList,
@@ -10,6 +11,7 @@ import {
   Flame,
   ChevronRight,
   ListTodo,
+  Users,
 } from "lucide-react";
 import {
   Card,
@@ -19,6 +21,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { useAuthStore } from "@/feature/auth/store/auth.store";
 
 /** 4 KPIs como en el mockup: icono + trend/pill arriba, label, valor grande, sub */
 const KPIS = [
@@ -96,7 +99,67 @@ const ACCIONES = [
   { title: "Nuevo riesgo registrado en procesos críticos", meta: "Impacto alto / probabilidad media", pill: "Riesgo", pillStyle: "danger" as const },
 ];
 
+const EPC_SHORTCUTS = [
+  {
+    title: "Usuarios",
+    description: "Administra cuentas, roles y permisos del tenant.",
+    href: "/usuarios",
+    icon: Users,
+  },
+  {
+    title: "Organización",
+    description: "Estructura, sedes y datos organizacionales.",
+    href: "/organizacion",
+    icon: Building2,
+  },
+] as const;
+
+function EpcDashboardHome() {
+  return (
+    <section className="flex flex-col gap-6">
+      <header className="flex flex-col gap-1">
+        <h1 className="text-xl font-semibold tracking-tight">Inicio</h1>
+        <p className="text-sm text-muted-foreground">
+          Accesos directos a la administración del tenant. El resumen ejecutivo con
+          indicadores no está disponible hasta contar con datos reales.
+        </p>
+      </header>
+      <div className="grid gap-4 sm:grid-cols-2 max-w-3xl">
+        {EPC_SHORTCUTS.map(({ title, description, href, icon: Icon }) => (
+          <Card
+            key={href}
+            className="overflow-hidden transition-shadow hover:shadow-md"
+          >
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2 text-lg">
+                <span className="flex size-10 items-center justify-center rounded-xl bg-primary/10 text-primary">
+                  <Icon className="size-5" />
+                </span>
+                {title}
+              </CardTitle>
+              <CardDescription>{description}</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <Button asChild className="w-full sm:w-auto">
+                <Link href={href} className="gap-1">
+                  Ir a {title}
+                  <ChevronRight className="size-4" />
+                </Link>
+              </Button>
+            </CardContent>
+          </Card>
+        ))}
+      </div>
+    </section>
+  );
+}
+
 export default function DashboardPage() {
+  const tenant = useAuthStore((s) => s.user?.tenant);
+  if (tenant === "epc") {
+    return <EpcDashboardHome />;
+  }
+
   return (
     <section className="flex flex-col gap-6">
       <header className="flex flex-col gap-1">

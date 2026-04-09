@@ -5,6 +5,7 @@ import Link from "next/link";
 import Image from "next/image";
 import { usePathname } from "next/navigation";
 import {
+  Building2,
   Calendar,
   LayoutDashboard,
   Users,
@@ -71,16 +72,17 @@ const navMainData = [
   },
 ];
 
-const EPC_ALLOWED_SECTIONS = ["Inicio", "Administración"];
+/** EPC: enlaces directos sin agrupar bajo "Administración". */
+const epcNavMainData = [
+  { title: "Usuarios", url: "/usuarios", icon: Users },
+  { title: "Organización", url: "/organizacion", icon: Building2 },
+];
 
 export function AppSidebar(props: React.ComponentProps<typeof Sidebar>) {
   const pathname = usePathname();
   const tenant = useAuthStore((s) => s.user?.tenant);
 
-  const filteredNav =
-    tenant === "epc"
-      ? navMainData.filter((item) => EPC_ALLOWED_SECTIONS.includes(item.title))
-      : navMainData;
+  const filteredNav = tenant === "epc" ? epcNavMainData : navMainData;
 
   // Marcar como isActive la sección que contiene la ruta actual
   const itemsWithActive = filteredNav.map((item) => ({
