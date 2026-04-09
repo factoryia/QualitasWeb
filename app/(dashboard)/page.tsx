@@ -238,7 +238,7 @@ export default function DashboardPage() {
             </Button>
           </CardHeader>
           <CardContent>
-            <div className="flex min-h-[300px] flex-col items-center justify-center rounded-2xl border border-dashed border-border bg-gradient-to-b from-background to-muted/30 p-6 text-center">
+            <div className="flex min-h-[300px] flex-col items-center justify-center rounded-2xl border border-dashed border-border bg-linear-to-b from-background to-muted/30 p-6 text-center">
               <div className="text-4xl text-muted-foreground/60">◫</div>
               <h4 className="mt-3 text-base font-semibold text-foreground">
                 Directorio central de procesos
