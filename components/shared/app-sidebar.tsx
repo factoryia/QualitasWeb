@@ -13,6 +13,7 @@ import {
   Zap,
 } from "lucide-react";
 import { NavMain } from "@/components/shared/nav-main";
+import type { NavMainItem } from "@/components/shared/nav-main";
 import { NavUser } from "@/components/shared/nav-user";
 import { useAuthStore } from "@/feature/auth/store/auth.store";
 import {
@@ -26,7 +27,7 @@ import {
   SidebarRail,
 } from "@/components/ui/sidebar";
 
-const navMainData = [
+const navMainData: NavMainItem[] = [
   {
     title: "Inicio",
     url: "/",
@@ -73,9 +74,9 @@ const navMainData = [
 ];
 
 /** EPC: enlaces directos sin agrupar bajo "Administración". */
-const epcNavMainData = [
-  { title: "Usuarios", url: "/usuarios", icon: Users },
-  { title: "Organización", url: "/organizacion", icon: Building2 },
+const epcNavMainData: NavMainItem[] = [
+  { title: "Usuarios", url: "/usuarios", icon: Users, items: [] },
+  { title: "Organización", url: "/organizacion", icon: Building2, items: [] },
 ];
 
 export function AppSidebar(props: React.ComponentProps<typeof Sidebar>) {
@@ -83,6 +84,7 @@ export function AppSidebar(props: React.ComponentProps<typeof Sidebar>) {
   const tenant = useAuthStore((s) => s.user?.tenant);
 
   const filteredNav = tenant === "epc" ? epcNavMainData : navMainData;
+  const homeHref = tenant === "epc" ? "/usuarios" : "/";
 
   // Marcar como isActive la sección que contiene la ruta actual
   const itemsWithActive = filteredNav.map((item) => ({
@@ -100,7 +102,7 @@ export function AppSidebar(props: React.ComponentProps<typeof Sidebar>) {
         <SidebarMenu>
           <SidebarMenuItem>
             <SidebarMenuButton size="lg" asChild>
-              <Link href="/">
+              <Link href={homeHref}>
                 <div className="flex aspect-square size-8 items-center justify-center rounded-lg  text-sidebar-primary-foreground overflow-hidden">
                   <Image
                     src="/icon/logo.svg"
