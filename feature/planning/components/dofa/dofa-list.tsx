@@ -1,25 +1,25 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import {
-  Calendar,
-  ChevronRight,
-  Loader2,
-  Plus,
-  Trash2,
-} from "lucide-react";
-import { Badge } from "@/components/ui/badge";
+import { Building2, Filter, Plus, Search } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Skeleton } from "@/components/ui/skeleton";
 import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import {
+  Dialog,
+  DialogContent,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import {
   Select,
   SelectContent,
@@ -27,209 +27,374 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import type { DofaAnalysisListDto } from "@/feature/planning/api/dofa";
+import { cn } from "@/lib/utils";
+import type {
+  CreateDofaAnalysisCommand,
+  DofaAnalysisListDto,
+} from "@/feature/planning/api/dofa";
 import {
   useDofaAnalysesQuery,
-  useDofaDeleteAnalysisMutation,
+  useDofaCreateAnalysisMutation,
 } from "@/feature/planning/hooks/use-dofa";
+import { useOrganizationsQuery } from "@/feature/organization/hooks/use-organizations";
+import { useAuthStore } from "@/feature/auth/store/auth.store";
 
 // ---------------------------------------------------------------------------
-// Progress bar (client-side heuristic while backend gap exists)
+// Constants
 // ---------------------------------------------------------------------------
 
-/** Returns 0–100 based on item count in the list DTO (no phase detail available at list level). */
-function deriveProgress(analysis: DofaAnalysisListDto): number {
-  const status = analysis.status ?? "draft";
-  if (status === "approved") return 100;
-  if (status === "in_review") return 66;
-  if (status === "draft") return 33;
-  return 0;
+const ENTITY_TYPES = [
+  { value: "Organization", label: "Organización" },
+  { value: "unit", label: "Unidad" },
+  { value: "process", label: "Proceso" },
+];
+
+type V2Status = "borrador" | "activo" | "cerrado";
+
+function toV2Status(status: string | null | undefined): V2Status {
+  if (!status || status === "draft") return "borrador";
+  if (status === "archived") return "cerrado";
+  return "activo"; // in_review | approved
 }
 
-const STATUS_LABELS: Record<string, string> = {
-  draft: "Borrador",
-  in_review: "En revisión",
-  approved: "Aprobado",
-  archived: "Archivado",
-};
-
-const STATUS_VARIANTS: Record<
-  string,
-  "default" | "secondary" | "outline" | "destructive"
-> = {
-  draft: "secondary",
-  in_review: "default",
-  approved: "outline",
-  archived: "destructive",
+const V2_STATUS_CONFIG: Record<V2Status, { label: string; className: string }> = {
+  borrador: { label: "Borrador", className: "bg-muted text-muted-foreground" },
+  activo: { label: "Activo", className: "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300" },
+  cerrado: { label: "Cerrado", className: "bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300" },
 };
 
 // ---------------------------------------------------------------------------
-// Component
+// Sub-components
+// ---------------------------------------------------------------------------
+
+function StatusChip({ status }: { status: string | null | undefined }) {
+  const v2 = toV2Status(status);
+  const cfg = V2_STATUS_CONFIG[v2];
+  return (
+    <span
+      className={cn(
+        "inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium",
+        cfg.className,
+      )}
+    >
+      {cfg.label}
+    </span>
+  );
+}
+
+function ProgressMini({ value }: { value: number }) {
+  const pct = Math.max(0, Math.min(100, Math.round(value)));
+  return (
+    <div className="flex items-center gap-2">
+      <div className="w-[70px] h-[5px] bg-muted rounded-full overflow-hidden">
+        <div
+          className="h-full bg-green-500 dark:bg-green-400 transition-all"
+          style={{ width: `${pct}%` }}
+        />
+      </div>
+      <span className="text-xs font-semibold text-green-700 dark:text-green-400 tabular-nums">
+        {pct}%
+      </span>
+    </div>
+  );
+}
+
+/** Client-side progress heuristic until backend provides phase-progress endpoint. */
+function deriveProgress(a: DofaAnalysisListDto): number {
+  const s = a.status ?? "draft";
+  if (s === "approved") return 100;
+  if (s === "in_review") return 66;
+  return 33;
+}
+
+function entityLabel(entityType: string | null | undefined) {
+  return (
+    ENTITY_TYPES.find(
+      (t) => t.value.toLowerCase() === (entityType ?? "").toLowerCase(),
+    )?.label ?? "Organización"
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Create Dialog (inline — avoids separate file for a single-use dialog)
+// ---------------------------------------------------------------------------
+
+type CreateDialogProps = {
+  open: boolean;
+  onOpenChange: (v: boolean) => void;
+  onCreated: (id: string) => void;
+};
+
+function CreateAnalysisDialog({ open, onOpenChange, onCreated }: CreateDialogProps) {
+  const tenantCode = useAuthStore((s) => s.user?.tenant ?? "root");
+  const { data: organizations = [] } = useOrganizationsQuery();
+  const createMutation = useDofaCreateAnalysisMutation();
+
+  const organization = useMemo(
+    () =>
+      organizations.find((o) => o.code === tenantCode) ?? organizations[0] ?? null,
+    [organizations, tenantCode],
+  );
+
+  const [title, setTitle] = useState("");
+  const [entityType, setEntityType] = useState("Organization");
+  const [period, setPeriod] = useState("");
+
+  const reset = () => {
+    setTitle("");
+    setEntityType("Organization");
+    setPeriod("");
+  };
+
+  const handleCreate = async () => {
+    if (!title.trim() || !organization) return;
+    const payload: CreateDofaAnalysisCommand = {
+      title: title.trim(),
+      entityType,
+      entityId: organization.id,
+      period: period.trim() || null,
+    };
+    const created = await createMutation.mutateAsync(payload);
+    if (created?.id) {
+      onOpenChange(false);
+      reset();
+      onCreated(created.id);
+    }
+  };
+
+  return (
+    <Dialog
+      open={open}
+      onOpenChange={(v) => {
+        if (!v) reset();
+        onOpenChange(v);
+      }}
+    >
+      <DialogContent className="sm:max-w-lg">
+        <DialogHeader>
+          <DialogTitle>Nuevo análisis DOFA</DialogTitle>
+        </DialogHeader>
+        <div className="space-y-4">
+          <div className="space-y-1">
+            <label className="text-sm font-medium">
+              Título <span className="text-destructive">*</span>
+            </label>
+            <Input
+              placeholder="Ej: Análisis DOFA Q1-2026"
+              value={title}
+              onChange={(e) => setTitle(e.target.value)}
+              autoFocus
+              onKeyDown={(e) => {
+                if (e.key === "Enter" && title.trim()) handleCreate();
+              }}
+            />
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            <div className="space-y-1">
+              <label className="text-sm font-medium">Tipo de entidad</label>
+              <Select value={entityType} onValueChange={setEntityType}>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {ENTITY_TYPES.map((t) => (
+                    <SelectItem key={t.value} value={t.value}>
+                      {t.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-1">
+              <label className="text-sm font-medium">Período</label>
+              <Input
+                placeholder="Ej: 2026"
+                value={period}
+                onChange={(e) => setPeriod(e.target.value)}
+              />
+            </div>
+          </div>
+        </div>
+        <DialogFooter>
+          <Button
+            variant="outline"
+            onClick={() => {
+              onOpenChange(false);
+              reset();
+            }}
+          >
+            Cancelar
+          </Button>
+          <Button
+            onClick={handleCreate}
+            disabled={!title.trim() || createMutation.isPending || !organization}
+          >
+            {createMutation.isPending ? "Creando..." : "Crear análisis"}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// DofaList
 // ---------------------------------------------------------------------------
 
 type Props = {
-  organizationId: string;
   onSelect: (analysisId: string) => void;
-  onCreateClick: () => void;
 };
 
-export function DofaList({ organizationId, onSelect, onCreateClick }: Props) {
-  const { data: allAnalyses = [], isLoading } = useDofaAnalysesQuery();
-  const deleteMutation = useDofaDeleteAnalysisMutation();
+export function DofaList({ onSelect }: Props) {
+  const { data: analyses = [], isLoading } = useDofaAnalysesQuery();
 
-  const [statusFilter, setStatusFilter] = useState<string>("all");
-  const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [search, setSearch] = useState("");
+  const [statusFilter, setStatusFilter] = useState<"all" | V2Status>("all");
+  const [entityFilter, setEntityFilter] = useState("all");
+  const [createOpen, setCreateOpen] = useState(false);
 
-  const analyses = useMemo(() => {
-    let result = allAnalyses.filter(
-      (a) => a.entityType === "Organization" && a.entityId === organizationId,
-    );
-    if (statusFilter !== "all") {
-      result = result.filter((a) => (a.status ?? "draft") === statusFilter);
-    }
-    return [...result].sort((a, b) => {
-      const ad = a.analysisDate ? new Date(a.analysisDate).getTime() : 0;
-      const bd = b.analysisDate ? new Date(b.analysisDate).getTime() : 0;
-      return bd - ad;
+  const filtered = useMemo(() => {
+    return analyses.filter((a) => {
+      const title = a.title ?? "";
+      if (search && !title.toLowerCase().includes(search.toLowerCase())) return false;
+      if (statusFilter !== "all" && toV2Status(a.status) !== statusFilter) return false;
+      if (
+        entityFilter !== "all" &&
+        (a.entityType ?? "Organization").toLowerCase() !== entityFilter.toLowerCase()
+      )
+        return false;
+      return true;
     });
-  }, [allAnalyses, organizationId, statusFilter]);
-
-  const deletingAnalysis = allAnalyses.find((a) => a.id === deletingId) ?? null;
-
-  if (isLoading) {
-    return (
-      <div className="flex items-center gap-2 text-sm text-muted-foreground py-8 justify-center">
-        <Loader2 className="h-4 w-4 animate-spin" />
-        Cargando análisis...
-      </div>
-    );
-  }
+  }, [analyses, search, statusFilter, entityFilter]);
 
   return (
-    <div className="space-y-4">
-      {/* Toolbar */}
-      <div className="flex flex-wrap items-center gap-3">
-        <Select value={statusFilter} onValueChange={setStatusFilter}>
-          <SelectTrigger className="w-[160px] h-9">
-            <SelectValue placeholder="Todos los estados" />
+    <div className="space-y-6">
+      {/* Header */}
+      <div className="flex items-start justify-between gap-4">
+        <div>
+          <h1 className="text-2xl font-bold">Análisis de Contexto</h1>
+          <p className="text-muted-foreground text-sm mt-1">
+            Gestione los análisis DOFA de su organización
+          </p>
+        </div>
+        <Button onClick={() => setCreateOpen(true)} className="gap-2 shrink-0">
+          <Plus className="h-4 w-4" />
+          Nuevo análisis
+        </Button>
+      </div>
+
+      {/* Filters */}
+      <div className="flex items-center gap-3 flex-wrap">
+        <div className="relative flex-1 min-w-[200px] max-w-sm">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+          <Input
+            placeholder="Buscar por título..."
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            className="pl-9"
+          />
+        </div>
+        <Select
+          value={statusFilter}
+          onValueChange={(v) => setStatusFilter(v as typeof statusFilter)}
+        >
+          <SelectTrigger className="w-[180px]">
+            <Filter className="h-4 w-4 mr-2" />
+            <SelectValue />
           </SelectTrigger>
           <SelectContent>
             <SelectItem value="all">Todos los estados</SelectItem>
-            {Object.entries(STATUS_LABELS).map(([k, v]) => (
-              <SelectItem key={k} value={k}>
-                {v}
+            <SelectItem value="borrador">Borrador</SelectItem>
+            <SelectItem value="activo">Activo</SelectItem>
+            <SelectItem value="cerrado">Cerrado</SelectItem>
+          </SelectContent>
+        </Select>
+        <Select value={entityFilter} onValueChange={setEntityFilter}>
+          <SelectTrigger className="w-[200px]">
+            <Building2 className="h-4 w-4 mr-2" />
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">Todas las entidades</SelectItem>
+            {ENTITY_TYPES.map((t) => (
+              <SelectItem key={t.value} value={t.value.toLowerCase()}>
+                {t.label}
               </SelectItem>
             ))}
           </SelectContent>
         </Select>
-
-        <div className="ml-auto">
-          <Button onClick={onCreateClick} size="sm">
-            <Plus className="h-4 w-4 mr-1" />
-            Nuevo análisis
-          </Button>
-        </div>
       </div>
 
-      {/* List */}
-      {analyses.length === 0 ? (
-        <div className="rounded-lg border bg-card p-10 text-center text-sm text-muted-foreground">
-          {statusFilter === "all"
-            ? "No hay análisis DOFA para esta organización."
-            : "No hay análisis con ese estado."}
-        </div>
-      ) : (
-        <div className="space-y-2">
-          {analyses.map((a) => {
-            const progress = deriveProgress(a);
-            const status = a.status ?? "draft";
-            return (
-              <div
-                key={a.id}
-                className="flex items-center gap-4 rounded-lg border bg-card px-4 py-3 hover:bg-accent/50 transition-colors cursor-pointer group"
-                onClick={() => onSelect(a.id)}
-              >
-                <div className="flex-1 min-w-0">
-                  <div className="flex flex-wrap items-center gap-2">
-                    <span className="font-medium text-sm truncate">{a.title}</span>
-                    <Badge variant={STATUS_VARIANTS[status] ?? "secondary"}>
-                      {STATUS_LABELS[status] ?? status}
-                    </Badge>
-                  </div>
-                  {a.period && (
-                    <div className="flex items-center gap-1 text-xs text-muted-foreground mt-0.5">
-                      <Calendar className="h-3 w-3" />
-                      {a.period}
-                    </div>
-                  )}
-                  {/* Progress bar */}
-                  <div className="mt-2 flex items-center gap-2">
-                    <div className="flex-1 h-1.5 rounded-full bg-muted overflow-hidden">
-                      <div
-                        className="h-full rounded-full bg-primary transition-all"
-                        style={{ width: `${progress}%` }}
-                      />
-                    </div>
-                    <span className="text-xs text-muted-foreground w-8 text-right shrink-0">
-                      {progress}%
-                    </span>
-                  </div>
-                </div>
+      {/* Table */}
+      <div className="border rounded-lg">
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead>Título</TableHead>
+              <TableHead>Entidad</TableHead>
+              <TableHead>Período</TableHead>
+              <TableHead>Responsable</TableHead>
+              <TableHead>Estado</TableHead>
+              <TableHead>Avance</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {isLoading ? (
+              Array.from({ length: 5 }).map((_, i) => (
+                <TableRow key={i}>
+                  {Array.from({ length: 6 }).map((__, j) => (
+                    <TableCell key={j}>
+                      <Skeleton className="h-4 w-full" />
+                    </TableCell>
+                  ))}
+                </TableRow>
+              ))
+            ) : filtered.length === 0 ? (
+              <TableRow>
+                <TableCell
+                  colSpan={6}
+                  className="text-center text-muted-foreground py-10"
+                >
+                  {analyses.length === 0
+                    ? "No hay análisis creados aún"
+                    : "No se encontraron resultados"}
+                </TableCell>
+              </TableRow>
+            ) : (
+              filtered.map((a) => (
+                <TableRow
+                  key={a.id}
+                  className="cursor-pointer hover:bg-muted/50"
+                  onClick={() => onSelect(a.id)}
+                >
+                  <TableCell className="font-medium">
+                    {a.title || "Análisis DOFA"}
+                  </TableCell>
+                  <TableCell className="text-sm text-muted-foreground">
+                    {entityLabel(a.entityType)}
+                  </TableCell>
+                  <TableCell className="text-sm">
+                    {a.period ?? <span className="text-muted-foreground">—</span>}
+                  </TableCell>
+                  <TableCell className="text-sm text-muted-foreground">—</TableCell>
+                  <TableCell>
+                    <StatusChip status={a.status} />
+                  </TableCell>
+                  <TableCell>
+                    <ProgressMini value={deriveProgress(a)} />
+                  </TableCell>
+                </TableRow>
+              ))
+            )}
+          </TableBody>
+        </Table>
+      </div>
 
-                <div className="flex items-center gap-1 shrink-0">
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="h-7 w-7 text-destructive opacity-0 group-hover:opacity-100"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      setDeletingId(a.id);
-                    }}
-                    disabled={deleteMutation.isPending}
-                  >
-                    <Trash2 className="h-3.5 w-3.5" />
-                  </Button>
-                  <ChevronRight className="h-4 w-4 text-muted-foreground" />
-                </div>
-              </div>
-            );
-          })}
-        </div>
-      )}
-
-      {/* Delete confirm */}
-      <AlertDialog
-        open={!!deletingId}
-        onOpenChange={(open) => {
-          if (!open) setDeletingId(null);
-        }}
-      >
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Eliminar análisis</AlertDialogTitle>
-            <AlertDialogDescription>
-              {deletingAnalysis
-                ? `¿Eliminar "${deletingAnalysis.title}"? Esta acción no se puede deshacer.`
-                : "¿Eliminar este análisis? Esta acción no se puede deshacer."}
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel onClick={() => setDeletingId(null)}>
-              Cancelar
-            </AlertDialogCancel>
-            <AlertDialogAction
-              disabled={deleteMutation.isPending}
-              onClick={async () => {
-                if (!deletingId) return;
-                const ok = await deleteMutation.mutateAsync(deletingId);
-                if (ok) setDeletingId(null);
-              }}
-            >
-              Eliminar
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+      <CreateAnalysisDialog
+        open={createOpen}
+        onOpenChange={setCreateOpen}
+        onCreated={onSelect}
+      />
     </div>
   );
 }
