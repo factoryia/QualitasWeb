@@ -22,9 +22,10 @@ import { PerspectiveManager } from "./perspective-manager";
 
 type Props = {
   analysisId: string;
+  readOnly?: boolean;
 };
 
-export function DofaDiagnostico({ analysisId }: Props) {
+export function DofaDiagnostico({ analysisId, readOnly = false }: Props) {
   const analysisQuery = useDofaAnalysisQuery(analysisId);
   const { data: bscPerspectives = [] } = useBscPerspectivesQuery();
   const createItemMutation = useDofaCreateItemMutation();

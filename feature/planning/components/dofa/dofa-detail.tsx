@@ -1,58 +1,139 @@
 "use client";
 
-import { useState } from "react";
-import {
-  ArrowLeft,
-  CheckCircle,
-  ChevronRight,
-  Clock,
-  Pencil,
-  Send,
-} from "lucide-react";
+import { useMemo, useState } from "react";
+import { ArrowLeft, Check, ChevronRight, Settings } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { cn } from "@/lib/utils";
+import type { DofaItemDto } from "@/feature/planning/api/dofa";
 import {
   useDofaAnalysisQuery,
-  useDofaUpdateAnalysisMutation,
+  useBscPerspectivesQuery,
 } from "@/feature/planning/hooks/use-dofa";
 import { DofaDiagnostico } from "./dofa-diagnostico";
-import {
-  DofaEditAnalysisDialog,
-  type EditAnalysisDraft,
-} from "./dofa-edit-analysis-dialog";
+import { DofaSettingsSheet } from "./dofa-settings-sheet";
 
 // ---------------------------------------------------------------------------
-// Status helpers
+// Types & constants
 // ---------------------------------------------------------------------------
 
-const STATUS_LABELS: Record<string, string> = {
-  draft: "Borrador",
-  in_review: "En revisión",
-  approved: "Aprobado",
-  archived: "Archivado",
+type Phase = 1 | 2 | 3;
+
+const STATUS_LABELS: Record<string, { label: string; className: string }> = {
+  draft: {
+    label: "Borrador",
+    className: "bg-muted text-muted-foreground border-transparent",
+  },
+  in_review: {
+    label: "En Revisión",
+    className:
+      "bg-amber-100 text-amber-800 border-transparent dark:bg-amber-900/30 dark:text-amber-300",
+  },
+  approved: {
+    label: "Activo",
+    className:
+      "bg-green-100 text-green-800 border-transparent dark:bg-green-900/30 dark:text-green-300",
+  },
+  archived: {
+    label: "Cerrado",
+    className: "bg-primary/10 text-primary border-transparent",
+  },
 };
 
-const STATUS_VARIANTS: Record<
-  string,
-  "default" | "secondary" | "outline" | "destructive"
-> = {
-  draft: "secondary",
-  in_review: "default",
-  approved: "outline",
-  archived: "destructive",
-};
+interface PhaseConfig {
+  num: Phase;
+  name: string;
+  textClass: string;
+  borderClass: string;
+  bgClass: string;
+  fillClass: string;
+}
 
-const NEXT_STATUS: Record<string, string> = {
-  draft: "in_review",
-  in_review: "approved",
-};
+const PHASES: PhaseConfig[] = [
+  {
+    num: 1,
+    name: "Diagnóstico",
+    textClass: "text-blue-600 dark:text-blue-400",
+    borderClass: "border-blue-500",
+    bgClass: "bg-blue-50 dark:bg-blue-950/30",
+    fillClass: "bg-blue-500",
+  },
+  {
+    num: 2,
+    name: "Estrategia",
+    textClass: "text-violet-600 dark:text-violet-400",
+    borderClass: "border-violet-500",
+    bgClass: "bg-violet-50 dark:bg-violet-950/30",
+    fillClass: "bg-violet-500",
+  },
+  {
+    num: 3,
+    name: "Plan",
+    textClass: "text-amber-600 dark:text-amber-400",
+    borderClass: "border-amber-500",
+    bgClass: "bg-amber-50 dark:bg-amber-950/30",
+    fillClass: "bg-amber-500",
+  },
+];
 
-const NEXT_STATUS_LABEL: Record<string, string> = {
-  draft: "Enviar a revisión",
-  in_review: "Aprobar",
-};
+// ---------------------------------------------------------------------------
+// Phase progress helpers (client-side, conservative until backend endpoint exists)
+// ---------------------------------------------------------------------------
+
+function usePhaseProgress(
+  analysisId: string,
+  items: DofaItemDto[],
+  status: string | null | undefined,
+) {
+  const { data: bscPerspectives = [] } = useBscPerspectivesQuery();
+
+  return useMemo(() => {
+    const activeItems = items.filter((i) => i.isActive);
+    const perspectiveKeys =
+      bscPerspectives.length > 0
+        ? bscPerspectives.map((p) => p.name)
+        : ["Financiero", "Cliente", "ProcesosInternos", "AprendizajeYCrecimiento"];
+
+    // Phase 1: % of perspectives with ≥1 internal (F/D) AND ≥1 external (O/A)
+    const byPerspective: Record<string, Set<string>> = {};
+    for (const item of activeItems) {
+      if (!byPerspective[item.perspective]) byPerspective[item.perspective] = new Set();
+      byPerspective[item.perspective].add(item.category);
+    }
+    const filledPerspectives = perspectiveKeys.filter((key) => {
+      const cats = byPerspective[key];
+      if (!cats) return false;
+      const hasInternal = cats.has("Fortaleza") || cats.has("Debilidad");
+      const hasExternal = cats.has("Oportunidad") || cats.has("Amenaza");
+      return hasInternal && hasExternal;
+    }).length;
+
+    const phase1Progress =
+      perspectiveKeys.length === 0
+        ? 0
+        : Math.round((filledPerspectives / perspectiveKeys.length) * 100);
+
+    // Phase 2 & 3: placeholder (Sprint 2/3)
+    const phase2Progress = 0;
+    const phase3Progress = 0;
+
+    return {
+      1: {
+        progress: phase1Progress,
+        subtext: `${activeItems.length} factores · ${filledPerspectives}/${perspectiveKeys.length} perspectivas`,
+      },
+      2: {
+        progress: phase2Progress,
+        subtext: "0 estrategias · 0 objetivos",
+      },
+      3: {
+        progress: phase3Progress,
+        subtext: "0 iniciados · 0 objetivos",
+      },
+    } as Record<Phase, { progress: number; subtext: string }>;
+  }, [items, bscPerspectives, analysisId]);
+}
 
 // ---------------------------------------------------------------------------
 // DofaDetail
@@ -65,176 +146,188 @@ type Props = {
 
 export function DofaDetail({ analysisId, onBack }: Props) {
   const analysisQuery = useDofaAnalysisQuery(analysisId);
-  const updateMutation = useDofaUpdateAnalysisMutation();
+  const [activePhase, setActivePhase] = useState<Phase>(1);
+  const [settingsOpen, setSettingsOpen] = useState(false);
 
-  const [editOpen, setEditOpen] = useState(false);
-  const [editDraft, setEditDraft] = useState<EditAnalysisDraft>({
-    title: "",
-    description: "",
-    period: "",
-  });
+  const analysis = analysisQuery.data;
+  const items = analysis?.items ?? [];
+  const phaseData = usePhaseProgress(analysisId, items, analysis?.status);
 
-  const openEdit = () => {
-    const a = analysisQuery.data;
-    if (!a) return;
-    setEditDraft({
-      title: a.title,
-      description: a.description ?? "",
-      period: a.period ?? "",
-    });
-    setEditOpen(true);
-  };
-
-  const saveEdit = async () => {
-    const a = analysisQuery.data;
-    if (!a) return;
-    const ok = await updateMutation.mutateAsync({
-      analysisId,
-      payload: {
-        title: editDraft.title.trim(),
-        description: editDraft.description.trim() || null,
-        period: editDraft.period.trim() || null,
-        status: a.status ?? "draft",
-      },
-    });
-    if (ok) setEditOpen(false);
-  };
-
-  const advanceStatus = async () => {
-    const a = analysisQuery.data;
-    if (!a?.status) return;
-    const next = NEXT_STATUS[a.status];
-    if (!next) return;
-    await updateMutation.mutateAsync({
-      analysisId,
-      payload: {
-        title: a.title,
-        description: a.description ?? null,
-        period: a.period ?? null,
-        status: next,
-      },
-    });
-  };
+  const isReadOnly = analysis?.status === "approved" || analysis?.status === "archived";
 
   if (analysisQuery.isLoading) {
     return (
-      <div className="space-y-4">
-        <Skeleton className="h-8 w-[200px]" />
-        <Skeleton className="h-[480px] w-full" />
+      <div className="p-6 space-y-4">
+        <Skeleton className="h-8 w-64" />
+        <Skeleton className="h-24 w-full" />
+        <Skeleton className="h-96 w-full" />
       </div>
     );
   }
 
-  if (!analysisQuery.data) {
+  if (!analysis) {
     return (
-      <div className="rounded-lg border bg-card p-10 text-center text-sm text-muted-foreground">
-        No se pudo cargar el análisis.
+      <div className="p-8 text-center">
+        <p className="text-muted-foreground">No se encontró el análisis solicitado.</p>
+        <Button variant="outline" className="mt-4" onClick={onBack}>
+          <ArrowLeft className="mr-2 h-4 w-4" /> Volver
+        </Button>
       </div>
     );
   }
 
-  const analysis = analysisQuery.data;
-  const currentStatus = analysis.status ?? "draft";
-  const isApproved = currentStatus === "approved";
-  const canAdvance = !!NEXT_STATUS[currentStatus] && !isApproved;
+  const statusConfig = STATUS_LABELS[analysis.status ?? "draft"] ?? STATUS_LABELS.draft;
+  const displayTitle = analysis.title || "Sin título";
 
   return (
-    <div className="space-y-4">
-      {/* Header row */}
-      <div className="flex flex-wrap items-start gap-3">
-        <Button variant="ghost" size="sm" onClick={onBack} className="shrink-0">
-          <ArrowLeft className="h-4 w-4 mr-1" />
-          Volver
-        </Button>
+    <div className="flex flex-col gap-4">
+      {/* ── Topbar ── */}
+      <div className="rounded-lg border bg-card px-4 py-3 shadow-sm space-y-2">
+        {/* Breadcrumb */}
+        <nav
+          className="flex items-center gap-1.5 text-xs text-muted-foreground"
+          aria-label="Breadcrumb"
+        >
+          <span>Planificación</span>
+          <ChevronRight className="h-3 w-3" />
+          <button
+            type="button"
+            onClick={onBack}
+            className="hover:text-foreground transition-colors"
+          >
+            Análisis de Contexto
+          </button>
+          <ChevronRight className="h-3 w-3" />
+          <span className="text-foreground font-medium truncate max-w-[300px]">
+            {displayTitle}
+          </span>
+        </nav>
 
-        <div className="flex-1 min-w-0">
-          <div className="flex flex-wrap items-center gap-2">
-            <h2 className="text-xl font-semibold truncate">{analysis.title}</h2>
-            <Badge variant={STATUS_VARIANTS[currentStatus] ?? "secondary"}>
-              {STATUS_LABELS[currentStatus] ?? currentStatus}
-            </Badge>
-            {analysis.period && (
-              <span className="text-sm text-muted-foreground flex items-center gap-1">
-                <Clock className="h-3.5 w-3.5" />
-                {analysis.period}
-              </span>
-            )}
+        {/* Title row */}
+        <div className="flex items-center gap-3">
+          <Button variant="ghost" size="sm" onClick={onBack} className="-ml-2">
+            <ArrowLeft className="mr-1 h-4 w-4" /> Volver
+          </Button>
+
+          <div className="flex-1 min-w-0">
+            <h1 className="text-lg font-semibold truncate px-1 text-foreground">
+              {displayTitle}
+            </h1>
           </div>
-          {analysis.description && (
-            <p className="text-sm text-muted-foreground mt-0.5 truncate">
-              {analysis.description}
-            </p>
-          )}
-        </div>
 
-        <div className="flex items-center gap-2 shrink-0 ml-auto">
-          {!isApproved && (
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={openEdit}
-              disabled={updateMutation.isPending}
-            >
-              <Pencil className="h-4 w-4 mr-1" />
-              Editar
-            </Button>
-          )}
-          {canAdvance && (
-            <Button
-              size="sm"
-              onClick={advanceStatus}
-              disabled={updateMutation.isPending}
-            >
-              {currentStatus === "in_review" ? (
-                <CheckCircle className="h-4 w-4 mr-1" />
-              ) : (
-                <Send className="h-4 w-4 mr-1" />
-              )}
-              {NEXT_STATUS_LABEL[currentStatus]}
-              <ChevronRight className="h-4 w-4 ml-1" />
-            </Button>
-          )}
-          {isApproved && (
-            <Badge variant="outline" className="text-green-700 border-green-600">
-              <CheckCircle className="h-3.5 w-3.5 mr-1" />
-              Aprobado — solo lectura
-            </Badge>
-          )}
+          <Badge
+            className={cn("font-medium", statusConfig.className)}
+            variant="outline"
+          >
+            {statusConfig.label}
+          </Badge>
+
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={() => setSettingsOpen(true)}
+            aria-label="Configuración del análisis"
+          >
+            <Settings className="h-4 w-4" />
+          </Button>
         </div>
       </div>
 
-      {/* Phase tabs */}
-      <Tabs defaultValue="diagnostico" className="w-full">
-        <TabsList>
-          <TabsTrigger value="diagnostico">Fase 1 — Diagnóstico</TabsTrigger>
-          <TabsTrigger value="estrategia">Fase 2 — Estrategia</TabsTrigger>
-          <TabsTrigger value="plan">Fase 3 — Plan</TabsTrigger>
-        </TabsList>
+      {/* ── Phase stepper cards ── */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+        {PHASES.map((phase) => {
+          const isActive = activePhase === phase.num;
+          const data = phaseData[phase.num];
+          const isCompleted = data.progress >= 100;
+          const showCheck = isCompleted && !isActive;
 
-        <TabsContent value="diagnostico" className="mt-4">
-          <DofaDiagnostico analysisId={analysisId} />
-        </TabsContent>
+          return (
+            <button
+              key={phase.num}
+              onClick={() => setActivePhase(phase.num)}
+              className={cn(
+                "flex flex-col gap-2 rounded-lg border bg-card px-4 py-3 text-left transition-all hover:shadow-md",
+                isActive
+                  ? cn(phase.borderClass, "ring-1", phase.bgClass)
+                  : "border-border hover:border-muted-foreground/30",
+              )}
+            >
+              <div className="flex items-center gap-3 w-full">
+                {/* Phase number / check circle */}
+                <div
+                  className={cn(
+                    "flex items-center justify-center w-7 h-7 rounded-full text-xs font-bold shrink-0",
+                    showCheck
+                      ? "bg-green-500 text-white"
+                      : isActive
+                        ? cn(
+                            "bg-background border-2",
+                            phase.borderClass,
+                            phase.textClass,
+                          )
+                        : "bg-muted text-muted-foreground",
+                  )}
+                >
+                  {showCheck ? <Check className="h-3.5 w-3.5" /> : phase.num}
+                </div>
 
-        <TabsContent value="estrategia" className="mt-4">
-          <div className="rounded-lg border bg-card p-10 text-center text-sm text-muted-foreground">
+                <div className="min-w-0 flex-1">
+                  <div
+                    className={cn(
+                      "font-semibold text-sm leading-tight",
+                      isActive ? phase.textClass : "text-foreground",
+                    )}
+                  >
+                    {phase.name}
+                  </div>
+                  <div className="text-[11px] text-muted-foreground truncate mt-0.5">
+                    {data.subtext}
+                  </div>
+                </div>
+
+                <div className="text-xs font-semibold text-foreground tabular-nums">
+                  {data.progress}%
+                </div>
+              </div>
+
+              {/* Progress bar */}
+              <div className="w-full h-1 rounded-full bg-muted overflow-hidden">
+                <div
+                  className={cn("h-full transition-all", phase.fillClass)}
+                  style={{ width: `${data.progress}%` }}
+                />
+              </div>
+            </button>
+          );
+        })}
+      </div>
+
+      {/* ── Content area ── */}
+      <div
+        className="rounded-lg border bg-card shadow-sm overflow-hidden"
+        id={`fase-${activePhase}`}
+      >
+        {activePhase === 1 && (
+          <DofaDiagnostico analysisId={analysisId} readOnly={isReadOnly} />
+        )}
+        {activePhase === 2 && (
+          <div className="p-10 text-center text-sm text-muted-foreground">
             Fase 2 — Estrategias (próximamente en Sprint 2)
           </div>
-        </TabsContent>
-
-        <TabsContent value="plan" className="mt-4">
-          <div className="rounded-lg border bg-card p-10 text-center text-sm text-muted-foreground">
+        )}
+        {activePhase === 3 && (
+          <div className="p-10 text-center text-sm text-muted-foreground">
             Fase 3 — Plan de objetivos (próximamente en Sprint 3)
           </div>
-        </TabsContent>
-      </Tabs>
+        )}
+      </div>
 
-      <DofaEditAnalysisDialog
-        open={editOpen}
-        onOpenChange={setEditOpen}
-        draft={editDraft}
-        onChange={(patch) => setEditDraft((d) => ({ ...d, ...patch }))}
-        onSave={saveEdit}
-        isBusy={updateMutation.isPending}
+      {/* Settings Sheet */}
+      <DofaSettingsSheet
+        open={settingsOpen}
+        onOpenChange={setSettingsOpen}
+        analysis={analysis}
+        readOnly={isReadOnly}
       />
     </div>
   );
