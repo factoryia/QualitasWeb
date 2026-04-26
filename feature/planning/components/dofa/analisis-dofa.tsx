@@ -1,12 +1,12 @@
 "use client";
 
-import { useEffect, useState, type FormEvent } from "react";
+import { useMemo, useState, type FormEvent } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import type { CreateDofaAnalysisCommand } from "@/feature/planning/api/dofa";
 import { useDofaCreateAnalysisMutation } from "@/feature/planning/hooks/use-dofa";
+import { useOrganizationsQuery } from "@/feature/organization/hooks/use-organizations";
 import { useAuthStore } from "@/feature/auth/store/auth.store";
-import { organizationsApi } from "@/feature/organization/api/organizations";
 import { DofaCreateAnalysisDialog } from "./dofa-create-analysis-dialog";
 import { DofaDetail } from "./dofa-detail";
 import { DofaList } from "./dofa-list";
@@ -21,10 +21,14 @@ type AnalysisDraft = {
 export function AnalisisDofa() {
   const createAnalysisMutation = useDofaCreateAnalysisMutation();
   const tenantCode = useAuthStore((s) => s.user?.tenant ?? "root");
+  const { data: organizations = [], isLoading: isOrgLoading } = useOrganizationsQuery();
 
-  const [organizationId, setOrganizationId] = useState<string | null>(null);
-  const [organizationName, setOrganizationName] = useState<string | null>(null);
-  const [isOrgLoading, setIsOrgLoading] = useState(true);
+  const organization = useMemo(() => {
+    return organizations.find((o) => o.code === tenantCode) ?? organizations[0] ?? null;
+  }, [organizations, tenantCode]);
+
+  const organizationId = organization?.id ?? null;
+  const organizationName = organization?.name ?? null;
 
   // Selected analysis — null = list view, string = detail view
   const [selectedId, setSelectedId] = useState<string | null>(null);
@@ -35,30 +39,6 @@ export function AnalisisDofa() {
     period: new Date().getFullYear().toString(),
     description: "",
   });
-
-  useEffect(() => {
-    let cancelled = false;
-    const run = async () => {
-      setIsOrgLoading(true);
-      try {
-        const list = await organizationsApi.list();
-        const matched = list.find((o) => o.code === tenantCode) ?? list[0] ?? null;
-        if (cancelled) return;
-        setOrganizationId(matched?.id ?? null);
-        setOrganizationName(matched?.name ?? null);
-      } catch {
-        if (cancelled) return;
-        setOrganizationId(null);
-        setOrganizationName(null);
-      } finally {
-        if (!cancelled) setIsOrgLoading(false);
-      }
-    };
-    run();
-    return () => {
-      cancelled = true;
-    };
-  }, [tenantCode]);
 
   const openCreateAnalysis = () => {
     const year = new Date().getFullYear();

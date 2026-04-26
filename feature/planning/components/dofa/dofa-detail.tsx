@@ -11,23 +11,17 @@ import {
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import {
-  Dialog,
-  DialogContent,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Textarea } from "@/components/ui/textarea";
 import {
   useDofaAnalysisQuery,
   useDofaUpdateAnalysisMutation,
 } from "@/feature/planning/hooks/use-dofa";
 import { DofaDiagnostico } from "./dofa-diagnostico";
+import {
+  DofaEditAnalysisDialog,
+  type EditAnalysisDraft,
+} from "./dofa-edit-analysis-dialog";
 
 // ---------------------------------------------------------------------------
 // Status helpers
@@ -61,77 +55,6 @@ const NEXT_STATUS_LABEL: Record<string, string> = {
 };
 
 // ---------------------------------------------------------------------------
-// Edit-analysis dialog (title, description, period)
-// ---------------------------------------------------------------------------
-
-type EditDraft = { title: string; description: string; period: string };
-
-type EditDialogProps = {
-  open: boolean;
-  onOpenChange: (v: boolean) => void;
-  draft: EditDraft;
-  onChange: (patch: Partial<EditDraft>) => void;
-  onSave: () => void;
-  isBusy: boolean;
-};
-
-function EditAnalysisDialog({
-  open,
-  onOpenChange,
-  draft,
-  onChange,
-  onSave,
-  isBusy,
-}: EditDialogProps) {
-  return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[520px]">
-        <DialogHeader>
-          <DialogTitle>Editar análisis</DialogTitle>
-        </DialogHeader>
-        <div className="space-y-4">
-          <div className="space-y-2">
-            <Label>Título</Label>
-            <Input
-              value={draft.title}
-              onChange={(e) => onChange({ title: e.target.value })}
-            />
-          </div>
-          <div className="space-y-2">
-            <Label>Periodo</Label>
-            <Input
-              value={draft.period}
-              onChange={(e) => onChange({ period: e.target.value })}
-              placeholder="2026"
-            />
-          </div>
-          <div className="space-y-2">
-            <Label>Descripción</Label>
-            <Textarea
-              value={draft.description}
-              onChange={(e) => onChange({ description: e.target.value })}
-              rows={3}
-            />
-          </div>
-        </div>
-        <DialogFooter>
-          <Button
-            variant="outline"
-            onClick={() => onOpenChange(false)}
-            disabled={isBusy}
-          >
-            Cancelar
-          </Button>
-          <Button onClick={onSave} disabled={isBusy || !draft.title.trim()}>
-            Guardar
-          </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
-  );
-}
-
-// ---------------------------------------------------------------------------
 // DofaDetail
 // ---------------------------------------------------------------------------
 
@@ -145,7 +68,7 @@ export function DofaDetail({ analysisId, onBack }: Props) {
   const updateMutation = useDofaUpdateAnalysisMutation();
 
   const [editOpen, setEditOpen] = useState(false);
-  const [editDraft, setEditDraft] = useState<EditDraft>({
+  const [editDraft, setEditDraft] = useState<EditAnalysisDraft>({
     title: "",
     description: "",
     period: "",
@@ -193,10 +116,6 @@ export function DofaDetail({ analysisId, onBack }: Props) {
     });
   };
 
-  const isApproved = analysisQuery.data?.status === "approved";
-  const currentStatus = analysisQuery.data?.status ?? "draft";
-  const canAdvance = !!NEXT_STATUS[currentStatus] && !isApproved;
-
   if (analysisQuery.isLoading) {
     return (
       <div className="space-y-4">
@@ -215,6 +134,9 @@ export function DofaDetail({ analysisId, onBack }: Props) {
   }
 
   const analysis = analysisQuery.data;
+  const currentStatus = analysis.status ?? "draft";
+  const isApproved = currentStatus === "approved";
+  const canAdvance = !!NEXT_STATUS[currentStatus] && !isApproved;
 
   return (
     <div className="space-y-4">
@@ -306,7 +228,7 @@ export function DofaDetail({ analysisId, onBack }: Props) {
         </TabsContent>
       </Tabs>
 
-      <EditAnalysisDialog
+      <DofaEditAnalysisDialog
         open={editOpen}
         onOpenChange={setEditOpen}
         draft={editDraft}
