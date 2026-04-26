@@ -1,16 +1,24 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import { Settings } from "lucide-react";
+import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import type { DofaItemDto } from "@/feature/planning/api/dofa";
 import {
+  useBscPerspectivesQuery,
   useDofaAnalysisQuery,
   useDofaCreateItemMutation,
   useDofaDeactivateItemMutation,
 } from "@/feature/planning/hooks/use-dofa";
-import { DOFA_CATEGORY_CARDS, DOFA_PERSPECTIVE_TABS } from "./dofa-constants";
+import {
+  DOFA_CATEGORY_CARDS,
+  DOFA_PERSPECTIVE_TABS,
+  type DofaPerspectiveTab,
+} from "./dofa-constants";
 import { improveText } from "./dofa-text";
 import { DofaPerspectiveTabs } from "./dofa-perspective-tabs";
+import { PerspectiveManager } from "./perspective-manager";
 
 type Props = {
   analysisId: string;
@@ -18,8 +26,30 @@ type Props = {
 
 export function DofaDiagnostico({ analysisId }: Props) {
   const analysisQuery = useDofaAnalysisQuery(analysisId);
+  const { data: bscPerspectives = [] } = useBscPerspectivesQuery();
   const createItemMutation = useDofaCreateItemMutation();
   const deactivateItemMutation = useDofaDeactivateItemMutation();
+
+  const [showPerspectiveManager, setShowPerspectiveManager] = useState(false);
+
+  /**
+   * Build perspective tabs from BSC backend data if available,
+   * otherwise fall back to hardcoded tabs.
+   *
+   * NOTE (tech debt): DOFA items still store perspective as a free string, not
+   * a BscPerspective UUID. See README.md — "TODO: reconciliar perspective
+   * string ↔ BscPerspective UUID" for the migration plan.
+   */
+  const perspectiveTabs = useMemo<DofaPerspectiveTab[]>(() => {
+    if (bscPerspectives.length === 0) return DOFA_PERSPECTIVE_TABS;
+    const sorted = [...bscPerspectives].sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
+    return sorted.map((p) => ({
+      value: p.code.toLowerCase(),
+      perspective: p.name,
+      label: p.name,
+      helper: p.description ?? `Perspectiva BSC: ${p.name}`,
+    }));
+  }, [bscPerspectives]);
 
   const activeItems = useMemo(() => {
     const items = analysisQuery.data?.items ?? [];
@@ -93,26 +123,45 @@ export function DofaDiagnostico({ analysisId }: Props) {
   }
 
   return (
-    <DofaPerspectiveTabs
-      analysisId={analysisId}
-      perspectiveTabs={DOFA_PERSPECTIVE_TABS}
-      categoryCards={DOFA_CATEGORY_CARDS}
-      itemsByCell={itemsByCell}
-      draftByCell={draftByCell}
-      onDraftChange={(cellKey, value) =>
-        setDraftByCell((prev) => ({ ...prev, [cellKey]: value }))
-      }
-      onAddItem={submitAddItem}
-      onImproveDraft={(cellKey) =>
-        setDraftByCell((prev) => ({
-          ...prev,
-          [cellKey]: improveText(prev[cellKey] ?? ""),
-        }))
-      }
-      onDeactivateItem={({ analysisId: aid, itemId }) =>
-        deactivateItemMutation.mutateAsync({ analysisId: aid, itemId })
-      }
-      busyItems={busyItems}
-    />
+    <div className="space-y-4">
+      <div className="flex justify-end">
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={() => setShowPerspectiveManager((v) => !v)}
+        >
+          <Settings className="h-4 w-4 mr-1" />
+          {showPerspectiveManager ? "Ocultar catálogo BSC" : "Gestionar perspectivas BSC"}
+        </Button>
+      </div>
+
+      {showPerspectiveManager && (
+        <div className="rounded-lg border p-4">
+          <PerspectiveManager />
+        </div>
+      )}
+
+      <DofaPerspectiveTabs
+        analysisId={analysisId}
+        perspectiveTabs={perspectiveTabs}
+        categoryCards={DOFA_CATEGORY_CARDS}
+        itemsByCell={itemsByCell}
+        draftByCell={draftByCell}
+        onDraftChange={(cellKey, value) =>
+          setDraftByCell((prev) => ({ ...prev, [cellKey]: value }))
+        }
+        onAddItem={submitAddItem}
+        onImproveDraft={(cellKey) =>
+          setDraftByCell((prev) => ({
+            ...prev,
+            [cellKey]: improveText(prev[cellKey] ?? ""),
+          }))
+        }
+        onDeactivateItem={({ analysisId: aid, itemId }) =>
+          deactivateItemMutation.mutateAsync({ analysisId: aid, itemId })
+        }
+        busyItems={busyItems}
+      />
+    </div>
   );
 }
