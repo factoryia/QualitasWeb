@@ -1,12 +1,15 @@
 "use client";
 
+import { Sparkles } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import type { DofaItemDto } from "@/feature/planning/api/dofa";
 import type { DofaCategory, GroupedItems, PerspectiveTab } from "./dofa-types";
 import { QUADRANTS } from "./dofa-types";
 import { AddFactorInput } from "./dofa-add-factor-input";
+import { EmptyPerspectiveGuide } from "./empty-perspective-guide";
 import { ItemCard } from "./dofa-item-card";
+import { getPerspectiveGuideKey, getPerspectiveIcon } from "./perspective-icons";
 
 type Props = {
   perspective: PerspectiveTab;
@@ -18,11 +21,14 @@ type Props = {
 };
 
 export function DofaPerspectivePanel({ perspective, grouped, readOnly, onAdd, onUpdate, onDelete }: Props) {
+  const PerspectiveIcon = getPerspectiveIcon(perspective.label);
+  const guideKey = getPerspectiveGuideKey(perspective.label);
+
   return (
     <div className="p-4 sm:p-6 space-y-4">
       <header className="flex items-start gap-3">
-        <div className="flex h-10 w-10 items-center justify-center rounded-md bg-primary/10 text-primary shrink-0 text-lg font-bold">
-          {perspective.label.charAt(0)}
+        <div className="flex h-10 w-10 items-center justify-center rounded-md bg-primary/10 text-primary shrink-0">
+          <PerspectiveIcon className="h-5 w-5" />
         </div>
         <div className="min-w-0">
           <h2 className="text-lg font-bold text-foreground">Perspectiva {perspective.label}</h2>
@@ -49,8 +55,14 @@ export function DofaPerspectivePanel({ perspective, grouped, readOnly, onAdd, on
                 </Badge>
               </header>
               <div className="p-2.5 space-y-1.5">
-                {list.length === 0 && !readOnly && (
-                  <p className="text-xs text-muted-foreground italic px-2 py-1">Sin factores aún. Agrega el primero.</p>
+                {list.length === 0 && (
+                  <EmptyPerspectiveGuide
+                    perspectiveKey={guideKey}
+                    category={q.category}
+                    onAddExample={(t) => onAdd(perspective.key, q.category, t)}
+                    readOnly={readOnly}
+                    accentClass={q.textClass}
+                  />
                 )}
                 {list.map((item) => (
                   <ItemCard
@@ -67,6 +79,15 @@ export function DofaPerspectivePanel({ perspective, grouped, readOnly, onAdd, on
                     onAdd={(t) => onAdd(perspective.key, q.category, t)}
                   />
                 )}
+                <button
+                  type="button"
+                  disabled
+                  title="Próximamente disponible"
+                  className="w-full flex items-center justify-center gap-1.5 text-[11px] font-medium text-primary/40 py-1 rounded cursor-not-allowed select-none"
+                >
+                  <Sparkles className="h-3 w-3" />
+                  Sugerir con IA
+                </button>
               </div>
             </section>
           );
