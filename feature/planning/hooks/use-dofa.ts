@@ -240,8 +240,11 @@ export function useDofaUpdateAnalysisMutation() {
 // BSC Perspectives
 // ---------------------------------------------------------------------------
 
-export function useBscPerspectivesQuery() {
-  return useQuery({ queryKey: bscKeys.list(), queryFn: listBscPerspectives });
+export function useBscPerspectivesQuery(includeInactive = false) {
+  return useQuery({
+    queryKey: [...bscKeys.list(), { includeInactive }],
+    queryFn: () => listBscPerspectives(includeInactive),
+  });
 }
 
 export function useBscPerspectiveCreateMutation() {

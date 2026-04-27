@@ -510,9 +510,13 @@ export async function updateDofaAnalysis(
 
 const BSC_BASE = "/api/v1/qualitas/strategic/bsc-perspectives";
 
-export async function listBscPerspectives(): Promise<BscPerspectiveDto[]> {
+export async function listBscPerspectives(
+  includeInactive = false,
+): Promise<BscPerspectiveDto[]> {
   try {
-    const { data } = await api.get<unknown>(BSC_BASE);
+    const { data } = await api.get<unknown>(BSC_BASE, {
+      params: { includeInactive },
+    });
     return extractArray<BscPerspectiveDto>(data);
   } catch (error: unknown) {
     console.error("Error fetching BSC perspectives:", error);
