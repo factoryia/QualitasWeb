@@ -26,16 +26,7 @@ import { cn } from "@/lib/utils";
 import toast from "react-hot-toast";
 import type { DofaAnalysisDto } from "@/feature/planning/api/dofa";
 import { useDofaUpdateAnalysisMutation } from "@/feature/planning/hooks/use-dofa";
-
-// ---------------------------------------------------------------------------
-// Constants
-// ---------------------------------------------------------------------------
-
-const ENTITY_TYPES = [
-  { value: "Organization", label: "Organización" },
-  { value: "unit", label: "Unidad" },
-  { value: "process", label: "Proceso" },
-];
+import { ENTITY_TYPES } from "./dofa-constants";
 
 const STATUS_OPTIONS = [
   {

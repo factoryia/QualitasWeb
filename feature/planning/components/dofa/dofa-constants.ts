@@ -1,5 +1,11 @@
 import type { DofaCategory, DofaPerspective } from "@/feature/planning/api/dofa";
 
+export const ENTITY_TYPES = [
+  { value: "Organization", label: "Organización" },
+  { value: "unit", label: "Unidad" },
+  { value: "process", label: "Proceso" },
+] as const;
+
 export type DofaPerspectiveTab = {
   value: string;
   perspective: DofaPerspective;

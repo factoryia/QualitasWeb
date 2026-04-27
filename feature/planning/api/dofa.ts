@@ -328,6 +328,7 @@ export interface CreateDofaAnalysisCommand {
   entityId: string;
   description?: string | null;
   period?: string | null;
+  responsibleId?: string | null;
 }
 
 export interface CreateDofaItemCommand {
