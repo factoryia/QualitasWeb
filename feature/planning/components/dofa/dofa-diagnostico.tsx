@@ -68,15 +68,15 @@ export function DofaDiagnostico({ analysisId, readOnly = false }: Props) {
   }, []);
 
   /**
-   * Build perspective list from BSC backend data, falling back to hardcoded tabs.
-   * NOTE: items still store perspective as a free string (tech debt — see README).
+   * Build perspective list from BSC backend data (key = UUID), falling back to
+   * hardcoded tabs (key = perspective string) when catalog is unavailable.
    */
   const perspectives = useMemo<PerspectiveTab[]>(() => {
     if (bscPerspectives.length > 0) {
       return [...bscPerspectives]
         .sort((a, b) => (a.order ?? 0) - (b.order ?? 0))
         .map((p) => ({
-          key: p.name,
+          key: p.id,
           label: p.name,
           description: p.description ?? `Perspectiva BSC: ${p.name}`,
         }));
@@ -103,11 +103,13 @@ export function DofaDiagnostico({ analysisId, readOnly = false }: Props) {
       map[p.key] = { Fortaleza: [], Debilidad: [], Oportunidad: [], Amenaza: [] };
     }
     for (const item of allItems) {
-      if (!map[item.perspective]) {
-        map[item.perspective] = { Fortaleza: [], Debilidad: [], Oportunidad: [], Amenaza: [] };
+      const perspKey = item.bscPerspectiveId ?? item.perspective;
+      if (!perspKey) continue;
+      if (!map[perspKey]) {
+        map[perspKey] = { Fortaleza: [], Debilidad: [], Oportunidad: [], Amenaza: [] };
       }
       const cat = item.category as DofaCategory;
-      if (map[item.perspective][cat]) map[item.perspective][cat].push(item);
+      if (map[perspKey][cat]) map[perspKey][cat].push(item);
     }
     return map;
   }, [perspectives, allItems]);
@@ -116,9 +118,13 @@ export function DofaDiagnostico({ analysisId, readOnly = false }: Props) {
     QUADRANTS.reduce((acc, q) => acc + (grouped[key]?.[q.category]?.length ?? 0), 0);
 
   const handleAdd = async (perspKey: string, category: DofaCategory, text: string) => {
-    const bscPerspectiveId = bscPerspectives.find((p) => p.name === perspKey)?.id;
+    // When catalog is loaded, perspKey is already the UUID (perspective.key = p.id).
+    // In the hardcoded fallback, bscPerspectives is empty so find returns undefined → guard fires.
+    const bscPerspectiveId = bscPerspectives.length > 0
+      ? perspKey
+      : bscPerspectives.find((p) => p.name === perspKey)?.id;
     if (!bscPerspectiveId) {
-      toast.error("No se encontró la perspectiva BSC. Recarga e intenta de nuevo.");
+      toast.error("No se pudo determinar la perspectiva BSC. Recarga e intenta de nuevo.");
       return;
     }
     const existing = grouped[perspKey]?.[category] ?? [];
