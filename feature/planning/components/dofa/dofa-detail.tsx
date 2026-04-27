@@ -92,14 +92,16 @@ function usePhaseProgress(
     const activeItems = items.filter((i) => i.isActive);
     const perspectiveKeys =
       bscPerspectives.length > 0
-        ? bscPerspectives.map((p) => p.name)
+        ? bscPerspectives.map((p) => p.id)
         : ["Financiero", "Cliente", "ProcesosInternos", "AprendizajeYCrecimiento"];
 
     // Phase 1: % of perspectives with ≥1 internal (F/D) AND ≥1 external (O/A)
     const byPerspective: Record<string, Set<string>> = {};
     for (const item of activeItems) {
-      if (!byPerspective[item.perspective]) byPerspective[item.perspective] = new Set();
-      byPerspective[item.perspective].add(item.category);
+      const perspKey = item.bscPerspectiveId ?? item.perspective;
+      if (!perspKey) continue;
+      if (!byPerspective[perspKey]) byPerspective[perspKey] = new Set();
+      byPerspective[perspKey].add(item.category);
     }
     const filledPerspectives = perspectiveKeys.filter((key) => {
       const cats = byPerspective[key];
