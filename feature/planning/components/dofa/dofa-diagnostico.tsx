@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { AlertTriangle, ArrowLeft, LayoutGrid, Loader2, Settings2 } from "lucide-react";
+import { AlertTriangle, ArrowLeft, Loader2 } from "lucide-react";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -19,7 +19,6 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { cn } from "@/lib/utils";
 import toast from "react-hot-toast";
 import type { DofaItemDto } from "@/feature/planning/api/dofa";
 import {
@@ -33,6 +32,7 @@ import { DOFA_PERSPECTIVE_TABS } from "./dofa-constants";
 import { DofaPerspectivePanel } from "./dofa-perspective-panel";
 import { MatrixMobileCards } from "./dofa-matrix-mobile";
 import { MatrixTable } from "./dofa-matrix-table";
+import { DofaSidebar } from "./dofa-sidebar";
 import { PerspectiveManager } from "./perspective-manager";
 import type { DofaCategory, GroupedItems, PerspectiveTab } from "./dofa-types";
 import { QUADRANTS } from "./dofa-types";
@@ -192,63 +192,16 @@ export function DofaDiagnostico({ analysisId, readOnly = false }: Props) {
     <div className="flex flex-col md:flex-row gap-4 p-3 sm:p-4">
       {/* ── Left sidebar: perspectives list ── */}
       {view !== "matrix" && (
-        <aside className="w-full md:w-[240px] md:shrink-0 md:self-start border rounded-lg bg-card flex flex-col overflow-hidden">
-          <div className="px-4 py-3 border-b flex items-center justify-between gap-2">
-            <h3 className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
-              Perspectivas BSC
-            </h3>
-            {!readOnly && (
-              <Button
-                variant="ghost"
-                size="icon"
-                className="h-6 w-6 text-muted-foreground hover:text-foreground"
-                onClick={() => setManagerOpen(true)}
-                title="Gestionar perspectivas"
-              >
-                <Settings2 className="h-3.5 w-3.5" />
-              </Button>
-            )}
-          </div>
-
-          <div className="flex-1 overflow-auto p-2 space-y-1 max-h-[40vh] md:max-h-none">
-            {perspectives.map((p) => {
-              const count = countFor(p.key);
-              const isActive = view === "perspective" && p.key === activePerspective;
-              const badgeClass =
-                count === 0
-                  ? "bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-300"
-                  : count >= 4
-                    ? "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300"
-                    : "bg-muted text-muted-foreground";
-              return (
-                <button
-                  key={p.key}
-                  onClick={() => { setActivePerspective(p.key); setView("perspective"); }}
-                  type="button"
-                  className={cn(
-                    "w-full flex items-center gap-2 px-3 py-2 rounded-md text-sm text-left transition-colors border-l-[3px]",
-                    isActive
-                      ? "bg-primary/10 border-l-primary text-foreground font-medium"
-                      : "border-l-transparent hover:bg-muted/60 text-foreground",
-                  )}
-                >
-                  <span className="flex-1 truncate">{p.label}</span>
-                  <span className={cn("inline-flex items-center gap-0.5 text-[10px] font-bold px-1.5 py-0.5 rounded-full tabular-nums shrink-0", badgeClass)}>
-                    {count === 0 && <AlertTriangle className="h-2.5 w-2.5" />}
-                    {count}
-                  </span>
-                </button>
-              );
-            })}
-          </div>
-
-          <div className="p-2 border-t">
-            <Button variant="outline" size="sm" className="w-full" onClick={() => setView("matrix")}>
-              <LayoutGrid className="h-4 w-4 mr-1.5" />
-              Ver Matriz
-            </Button>
-          </div>
-        </aside>
+        <DofaSidebar
+          perspectives={perspectives}
+          activePerspective={activePerspective}
+          view={view}
+          countFor={countFor}
+          readOnly={readOnly}
+          onSelectPerspective={(key) => { setActivePerspective(key); setView("perspective"); }}
+          onViewMatrix={() => setView("matrix")}
+          onOpenManager={() => setManagerOpen(true)}
+        />
       )}
 
       {/* ── Main panel ── */}
