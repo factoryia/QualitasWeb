@@ -53,22 +53,20 @@ npm run dev
 
 ## Known tech debt
 
-### TODO: reconciliar perspective string ↔ BscPerspective UUID
+### ✅ RESOLVED (2026-04-27): reconciliar perspective string ↔ BscPerspective UUID
 
-`DofaItemDto.perspective` is currently stored as a **free string** (e.g. `"Financiero"`),
-matching the `BscPerspectiveDto.name`. The backend's `CreateDofaItemCommand` also expects
-a string, not a UUID.
+The backend `CreateDofaItemRequest` and `UpdateDofaItemRequest` now require
+`bscPerspectiveId` (UUID) instead of a free `perspective` string.
 
-The clean architecture would store the `BscPerspective.id` (UUID) and join at query time.
-This migration requires a **coordinated backend change** in:
-- `Modules.Qualitas.Strategic.Contracts/DTOs/CreateDofaItemCommand.cs`
-  → rename `perspective: string` → `bscPerspectiveId: Guid`
-- The corresponding EF migration to add FK column
-
-Until that change lands, `dofa-diagnostico.tsx` maps `BscPerspectiveDto.name` to the
-`perspective` field so items continue to work. When the backend is updated, update
-`CreateDofaItemCommand` in `feature/planning/api/dofa.ts` and the `submitAddItem`
-handler in `dofa-diagnostico.tsx`.
+**Applied in commit `fix(planning/dofa): resolve BscPerspectiveId from catalog`:**
+- `CreateDofaItemCommand` and `UpdateDofaItemCommand` in `api/dofa.ts` now use
+  `bscPerspectiveId: string` (removed `perspective`, `priority`, `impactLevel`).
+- `DofaItemDto` gained `bscPerspectiveId?: string` (optional, since GET response
+  may still return `perspective` for compat — both are accepted).
+- `handleAdd` in `dofa-diagnostico.tsx` resolves the UUID by matching
+  `bscPerspectives.find(p => p.name === perspKey)?.id`.
+- `handleUpdate` prioritises `item.bscPerspectiveId` (direct from response) and
+  falls back to name-based lookup — gracefully handles either backend response shape.
 
 ### Backend gaps (not yet in OpenAPI spec)
 

@@ -20,6 +20,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { cn } from "@/lib/utils";
+import toast from "react-hot-toast";
 import type { DofaItemDto } from "@/feature/planning/api/dofa";
 import {
   useBscPerspectivesQuery,
@@ -115,16 +116,19 @@ export function DofaDiagnostico({ analysisId, readOnly = false }: Props) {
     QUADRANTS.reduce((acc, q) => acc + (grouped[key]?.[q.category]?.length ?? 0), 0);
 
   const handleAdd = async (perspKey: string, category: DofaCategory, text: string) => {
+    const bscPerspectiveId = bscPerspectives.find((p) => p.name === perspKey)?.id;
+    if (!bscPerspectiveId) {
+      toast.error("No se encontró la perspectiva BSC. Recarga e intenta de nuevo.");
+      return;
+    }
     const existing = grouped[perspKey]?.[category] ?? [];
     const maxOrder = existing.reduce((acc, it) => Math.max(acc, it.order ?? 0), 0);
     await createItemMutation.mutateAsync({
       analysisId,
       payload: {
-        perspective: perspKey,
+        bscPerspectiveId,
         category,
         description: text,
-        priority: "Media",
-        impactLevel: "Medio",
         order: maxOrder + 1,
         responsibleId: null,
       },
@@ -132,15 +136,20 @@ export function DofaDiagnostico({ analysisId, readOnly = false }: Props) {
   };
 
   const handleUpdate = async (item: DofaItemDto, text: string) => {
+    const bscPerspectiveId =
+      item.bscPerspectiveId ??
+      bscPerspectives.find((p) => p.name === item.perspective)?.id;
+    if (!bscPerspectiveId) {
+      toast.error("No se encontró la perspectiva BSC. Recarga e intenta de nuevo.");
+      return;
+    }
     await updateItemMutation.mutateAsync({
       analysisId,
       itemId: item.id,
       payload: {
-        perspective: item.perspective,
+        bscPerspectiveId,
         category: item.category,
         description: text,
-        priority: item.priority ?? "Media",
-        impactLevel: item.impactLevel ?? "Medio",
         order: item.order ?? 0,
         responsibleId: item.responsibleId ?? null,
         isActive: true,

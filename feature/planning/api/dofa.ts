@@ -299,6 +299,7 @@ export interface DofaAnalysisListDto {
 
 export interface DofaItemDto {
   id: string;
+  bscPerspectiveId?: string;
   perspective: DofaPerspective;
   category: DofaCategory;
   description: string;
@@ -332,21 +333,17 @@ export interface CreateDofaAnalysisCommand {
 }
 
 export interface CreateDofaItemCommand {
-  perspective: DofaPerspective;
+  bscPerspectiveId: string;
   category: DofaCategory;
   description: string;
-  priority: DofaPriority;
-  impactLevel?: DofaImpactLevel | null;
   order: number;
   responsibleId?: string | null;
 }
 
 export interface UpdateDofaItemCommand {
-  perspective: DofaPerspective;
+  bscPerspectiveId: string;
   category: DofaCategory;
   description: string;
-  priority: DofaPriority;
-  impactLevel?: DofaImpactLevel | null;
   order: number;
   responsibleId?: string | null;
   isActive?: boolean;
@@ -437,7 +434,7 @@ export async function createDofaItem(
     toast.success("Ítem DOFA creado");
     return data ?? null;
   } catch (error: unknown) {
-    console.error("Error creating DOFA item:", error);
+    console.error("Error creating DOFA item — payload sent:", payload, error);
     toast.error(
       (error as { response?: { data?: { message?: string } } })?.response?.data
         ?.message || "Error al crear el ítem DOFA",
@@ -456,7 +453,7 @@ export async function updateDofaItem(
     toast.success("Ítem DOFA actualizado");
     return true;
   } catch (error: unknown) {
-    console.error("Error updating DOFA item:", error);
+    console.error("Error updating DOFA item — payload sent:", payload, error);
     toast.error(
       (error as { response?: { data?: { message?: string } } })?.response?.data
         ?.message || "Error al actualizar el ítem DOFA",
