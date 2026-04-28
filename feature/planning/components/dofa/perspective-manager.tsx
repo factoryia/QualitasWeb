@@ -73,29 +73,35 @@ export function PerspectiveManager() {
       name: p.name,
       description: p.description ?? "",
       color: p.color ?? "",
-      order: String(p.order ?? 0),
+      icon: p.icon ?? "compass",
     });
     setDialogOpen(true);
   };
 
   const handleSave = async () => {
-    const orderNum = parseInt(draft.order, 10) || 0;
     if (dialogMode === "create") {
+      const nextOrder =
+        perspectives.length > 0
+          ? Math.max(...perspectives.map((p) => p.order ?? 0)) + 1
+          : 1;
       const payload: CreateBscPerspectiveCommand = {
         code: draft.code.trim(),
         name: draft.name.trim(),
         description: draft.description.trim() || null,
         color: draft.color.trim() || null,
-        order: orderNum,
+        icon: draft.icon || null,
+        order: nextOrder,
       };
       const created = await createMutation.mutateAsync(payload);
       if (created) setDialogOpen(false);
     } else if (editingId) {
+      const editing = perspectives.find((p) => p.id === editingId);
       const payload: UpdateBscPerspectiveCommand = {
         name: draft.name.trim(),
         description: draft.description.trim() || null,
         color: draft.color.trim() || null,
-        order: orderNum,
+        icon: draft.icon || null,
+        order: editing?.order ?? 0,
       };
       const ok = await updateMutation.mutateAsync({ perspectiveId: editingId, payload });
       if (ok) setDialogOpen(false);
