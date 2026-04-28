@@ -280,7 +280,7 @@ export function DofaDiagnostico({ analysisId, readOnly = false }: Props) {
           <DialogHeader>
             <DialogTitle>Gestionar perspectivas BSC</DialogTitle>
           </DialogHeader>
-          <PerspectiveManager />
+          <PerspectiveManager items={allItems} />
         </DialogContent>
       </Dialog>
     </div>
