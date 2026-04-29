@@ -59,14 +59,23 @@ export const COLOR_PRESETS: string[] = [
 // Standard perspective detection
 // ---------------------------------------------------------------------------
 
-export const STANDARD_PERSPECTIVE_CODES = ["FIN", "CLI", "PRO", "APR"] as const;
+export const STANDARD_PERSPECTIVE_CODES = [
+  // Short codes (planned)
+  "FIN", "CLI", "PRO", "APR",
+  // Long codes from backend seed (actual)
+  "FINANCIERO", "CLIENTE", "PROCESOS_INTERNOS", "APRENDIZAJE_CRECIMIENTO",
+] as const;
 
-/** Maps BSC standard codes to icon keys */
+/** Maps BSC standard codes to icon keys (both short and long backend seed codes) */
 const CODE_TO_ICON_KEY: Record<string, string> = {
   FIN: "dollar",
   CLI: "users",
   PRO: "cog",
   APR: "graduation",
+  FINANCIERO: "dollar",
+  CLIENTE: "users",
+  PROCESOS_INTERNOS: "cog",
+  APRENDIZAJE_CRECIMIENTO: "graduation",
 };
 
 /** Maps lowercase name substrings to icon keys (fallback when code absent) */
@@ -83,17 +92,15 @@ const DEFAULT_KEY_TO_ICON: Record<string, string> = {
  * Returns true if the perspective is one of the four BSC standard ones.
  * Uses `code` first; falls back to name substring when code is absent.
  */
-export function isStandardPerspective(p: { code?: string; name: string }): boolean {
-  if (p.code) {
-    return (STANDARD_PERSPECTIVE_CODES as readonly string[]).includes(p.code.toUpperCase());
+export function isStandardPerspective(p: { code?: string | null; name?: string | null }): boolean {
+  if (p.code && (STANDARD_PERSPECTIVE_CODES as readonly string[]).includes(p.code.toUpperCase())) {
+    return true;
   }
-  const lower = p.name.toLowerCase();
-  return (
-    lower.includes("financ") ||
-    lower.includes("cliente") ||
-    lower.includes("proceso") ||
-    lower.includes("aprend")
-  );
+  if (p.name) {
+    const n = p.name.toLowerCase();
+    return ["financ", "cliente", "proceso", "aprend"].some((kw) => n.includes(kw));
+  }
+  return false;
 }
 
 // ---------------------------------------------------------------------------
