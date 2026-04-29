@@ -365,6 +365,7 @@ export async function listDofaAnalyses(): Promise<DofaAnalysisListDto[]> {
     const { data } = await api.get<unknown>(BASE);
     return extractArray<DofaAnalysisListDto>(data);
   } catch (error: unknown) {
+    if ((error as { __sessionExpired?: boolean })?.__sessionExpired) return [];
     console.error("Error fetching DOFA analyses:", error);
     toast.error(
       (error as { response?: { data?: { message?: string } } })?.response?.data
@@ -382,6 +383,7 @@ export async function createDofaAnalysis(
     toast.success("Análisis DOFA creado");
     return data ?? null;
   } catch (error: unknown) {
+    if ((error as { __sessionExpired?: boolean })?.__sessionExpired) return null;
     console.error("Error creating DOFA analysis:", error);
     toast.error(
       (error as { response?: { data?: { message?: string } } })?.response?.data
@@ -398,6 +400,7 @@ export async function getDofaAnalysisById(
     const { data } = await api.get<DofaAnalysisDto>(`${BASE}/${analysisId}`);
     return data ?? null;
   } catch (error: unknown) {
+    if ((error as { __sessionExpired?: boolean })?.__sessionExpired) return null;
     console.error("Error fetching DOFA analysis:", error);
     toast.error(
       (error as { response?: { data?: { message?: string } } })?.response?.data
@@ -413,6 +416,7 @@ export async function deleteDofaAnalysis(analysisId: string): Promise<boolean> {
     toast.success("Análisis DOFA eliminado");
     return true;
   } catch (error: unknown) {
+    if ((error as { __sessionExpired?: boolean })?.__sessionExpired) return false;
     console.error("Error deleting DOFA analysis:", error);
     toast.error(
       (error as { response?: { data?: { message?: string } } })?.response?.data
@@ -434,6 +438,7 @@ export async function createDofaItem(
     toast.success("Ítem DOFA creado");
     return data ?? null;
   } catch (error: unknown) {
+    if ((error as { __sessionExpired?: boolean })?.__sessionExpired) return null;
     console.error("Error creating DOFA item — payload sent:", payload, error);
     toast.error(
       (error as { response?: { data?: { message?: string } } })?.response?.data
@@ -453,6 +458,7 @@ export async function updateDofaItem(
     toast.success("Ítem DOFA actualizado");
     return true;
   } catch (error: unknown) {
+    if ((error as { __sessionExpired?: boolean })?.__sessionExpired) return false;
     console.error("Error updating DOFA item — payload sent:", payload, error);
     toast.error(
       (error as { response?: { data?: { message?: string } } })?.response?.data
@@ -471,6 +477,7 @@ export async function deactivateDofaItem(
     toast.success("Ítem DOFA desactivado");
     return true;
   } catch (error: unknown) {
+    if ((error as { __sessionExpired?: boolean })?.__sessionExpired) return false;
     console.error("Error deactivating DOFA item:", error);
     toast.error(
       (error as { response?: { data?: { message?: string } } })?.response?.data
@@ -493,6 +500,7 @@ export async function updateDofaAnalysis(
     toast.success("Análisis DOFA actualizado");
     return true;
   } catch (error: unknown) {
+    if ((error as { __sessionExpired?: boolean })?.__sessionExpired) return false;
     console.error("Error updating DOFA analysis:", error);
     toast.error(
       (error as { response?: { data?: { message?: string } } })?.response?.data
@@ -517,6 +525,7 @@ export async function listBscPerspectives(
     });
     return extractArray<BscPerspectiveDto>(data);
   } catch (error: unknown) {
+    if ((error as { __sessionExpired?: boolean })?.__sessionExpired) return [];
     console.error("Error fetching BSC perspectives:", error);
     toast.error(
       (error as { response?: { data?: { message?: string } } })?.response?.data
@@ -534,6 +543,7 @@ export async function createBscPerspective(
     toast.success("Perspectiva BSC creada");
     return data ?? null;
   } catch (error: unknown) {
+    if ((error as { __sessionExpired?: boolean })?.__sessionExpired) return null;
     console.error("Error creating BSC perspective:", error);
     toast.error(
       (error as { response?: { data?: { message?: string } } })?.response?.data
@@ -552,6 +562,7 @@ export async function updateBscPerspective(
     toast.success("Perspectiva BSC actualizada");
     return true;
   } catch (error: unknown) {
+    if ((error as { __sessionExpired?: boolean })?.__sessionExpired) return false;
     console.error("Error updating BSC perspective:", error);
     toast.error(
       (error as { response?: { data?: { message?: string } } })?.response?.data
@@ -567,6 +578,7 @@ export async function deleteBscPerspective(perspectiveId: string): Promise<boole
     toast.success("Perspectiva BSC eliminada");
     return true;
   } catch (error: unknown) {
+    if ((error as { __sessionExpired?: boolean })?.__sessionExpired) return false;
     console.error("Error deleting BSC perspective:", error);
     toast.error(
       (error as { response?: { data?: { message?: string } } })?.response?.data
@@ -587,6 +599,7 @@ export async function listStrategyTypes(): Promise<StrategyTypeDto[]> {
     const { data } = await api.get<unknown>(STRATEGY_TYPES_BASE);
     return extractArray<StrategyTypeDto>(data);
   } catch (error: unknown) {
+    if ((error as { __sessionExpired?: boolean })?.__sessionExpired) return [];
     console.error("Error fetching strategy types:", error);
     toast.error(
       (error as { response?: { data?: { message?: string } } })?.response?.data
@@ -607,6 +620,7 @@ export async function listStrategies(): Promise<StrategyDto[]> {
     const { data } = await api.get<unknown>(STRATEGIES_BASE);
     return extractArray<StrategyDto>(data);
   } catch (error: unknown) {
+    if ((error as { __sessionExpired?: boolean })?.__sessionExpired) return [];
     console.error("Error fetching strategies:", error);
     toast.error(
       (error as { response?: { data?: { message?: string } } })?.response?.data
@@ -624,6 +638,7 @@ export async function createStrategy(
     toast.success("Estrategia creada");
     return data ?? null;
   } catch (error: unknown) {
+    if ((error as { __sessionExpired?: boolean })?.__sessionExpired) return null;
     console.error("Error creating strategy:", error);
     toast.error(
       (error as { response?: { data?: { message?: string } } })?.response?.data
@@ -642,6 +657,7 @@ export async function updateStrategy(
     toast.success("Estrategia actualizada");
     return true;
   } catch (error: unknown) {
+    if ((error as { __sessionExpired?: boolean })?.__sessionExpired) return false;
     console.error("Error updating strategy:", error);
     toast.error(
       (error as { response?: { data?: { message?: string } } })?.response?.data
@@ -657,6 +673,7 @@ export async function deleteStrategy(strategyId: string): Promise<boolean> {
     toast.success("Estrategia eliminada");
     return true;
   } catch (error: unknown) {
+    if ((error as { __sessionExpired?: boolean })?.__sessionExpired) return false;
     console.error("Error deleting strategy:", error);
     toast.error(
       (error as { response?: { data?: { message?: string } } })?.response?.data
@@ -675,6 +692,7 @@ export async function listStrategyDofaItems(
     );
     return extractArray<StrategyDofaItemLinkDto>(data);
   } catch (error: unknown) {
+    if ((error as { __sessionExpired?: boolean })?.__sessionExpired) return [];
     console.error("Error fetching strategy DOFA items:", error);
     return [];
   }
@@ -689,6 +707,7 @@ export async function linkDofaItemToStrategy(
     toast.success("Factor DOFA vinculado");
     return true;
   } catch (error: unknown) {
+    if ((error as { __sessionExpired?: boolean })?.__sessionExpired) return false;
     console.error("Error linking DOFA item to strategy:", error);
     toast.error(
       (error as { response?: { data?: { message?: string } } })?.response?.data
@@ -707,6 +726,7 @@ export async function unlinkDofaItemFromStrategy(
     toast.success("Factor DOFA desvinculado");
     return true;
   } catch (error: unknown) {
+    if ((error as { __sessionExpired?: boolean })?.__sessionExpired) return false;
     console.error("Error unlinking DOFA item from strategy:", error);
     toast.error(
       (error as { response?: { data?: { message?: string } } })?.response?.data
@@ -723,6 +743,7 @@ export async function listStrategyObjectives(strategyId: string): Promise<Object
     );
     return extractArray<ObjectiveDto>(data);
   } catch (error: unknown) {
+    if ((error as { __sessionExpired?: boolean })?.__sessionExpired) return [];
     console.error("Error fetching strategy objectives:", error);
     return [];
   }
@@ -737,6 +758,7 @@ export async function linkObjectiveToStrategy(
     toast.success("Objetivo vinculado");
     return true;
   } catch (error: unknown) {
+    if ((error as { __sessionExpired?: boolean })?.__sessionExpired) return false;
     console.error("Error linking objective to strategy:", error);
     toast.error(
       (error as { response?: { data?: { message?: string } } })?.response?.data
@@ -755,6 +777,7 @@ export async function unlinkObjectiveFromStrategy(
     toast.success("Objetivo desvinculado");
     return true;
   } catch (error: unknown) {
+    if ((error as { __sessionExpired?: boolean })?.__sessionExpired) return false;
     console.error("Error unlinking objective from strategy:", error);
     toast.error(
       (error as { response?: { data?: { message?: string } } })?.response?.data
@@ -775,6 +798,7 @@ export async function listObjectives(): Promise<ObjectiveDto[]> {
     const { data } = await api.get<unknown>(OBJECTIVES_BASE);
     return extractArray<ObjectiveDto>(data);
   } catch (error: unknown) {
+    if ((error as { __sessionExpired?: boolean })?.__sessionExpired) return [];
     console.error("Error fetching objectives:", error);
     toast.error(
       (error as { response?: { data?: { message?: string } } })?.response?.data
@@ -792,6 +816,7 @@ export async function createObjective(
     toast.success("Objetivo creado");
     return data ?? null;
   } catch (error: unknown) {
+    if ((error as { __sessionExpired?: boolean })?.__sessionExpired) return null;
     console.error("Error creating objective:", error);
     toast.error(
       (error as { response?: { data?: { message?: string } } })?.response?.data
@@ -810,6 +835,7 @@ export async function updateObjective(
     toast.success("Objetivo actualizado");
     return true;
   } catch (error: unknown) {
+    if ((error as { __sessionExpired?: boolean })?.__sessionExpired) return false;
     console.error("Error updating objective:", error);
     toast.error(
       (error as { response?: { data?: { message?: string } } })?.response?.data
@@ -825,6 +851,7 @@ export async function deleteObjective(objectiveId: string): Promise<boolean> {
     toast.success("Objetivo eliminado");
     return true;
   } catch (error: unknown) {
+    if ((error as { __sessionExpired?: boolean })?.__sessionExpired) return false;
     console.error("Error deleting objective:", error);
     toast.error(
       (error as { response?: { data?: { message?: string } } })?.response?.data
@@ -845,6 +872,7 @@ export async function listGoals(): Promise<GoalDto[]> {
     const { data } = await api.get<unknown>(GOALS_BASE);
     return extractArray<GoalDto>(data);
   } catch (error: unknown) {
+    if ((error as { __sessionExpired?: boolean })?.__sessionExpired) return [];
     console.error("Error fetching goals:", error);
     toast.error(
       (error as { response?: { data?: { message?: string } } })?.response?.data
@@ -860,6 +888,7 @@ export async function createGoal(payload: CreateGoalCommand): Promise<GoalDto | 
     toast.success("Meta creada");
     return data ?? null;
   } catch (error: unknown) {
+    if ((error as { __sessionExpired?: boolean })?.__sessionExpired) return null;
     console.error("Error creating goal:", error);
     toast.error(
       (error as { response?: { data?: { message?: string } } })?.response?.data
@@ -878,6 +907,7 @@ export async function updateGoal(
     toast.success("Meta actualizada");
     return true;
   } catch (error: unknown) {
+    if ((error as { __sessionExpired?: boolean })?.__sessionExpired) return false;
     console.error("Error updating goal:", error);
     toast.error(
       (error as { response?: { data?: { message?: string } } })?.response?.data
@@ -898,6 +928,7 @@ export async function listIndicators(goalId: string): Promise<IndicatorDto[]> {
     );
     return extractArray<IndicatorDto>(data);
   } catch (error: unknown) {
+    if ((error as { __sessionExpired?: boolean })?.__sessionExpired) return [];
     console.error("Error fetching indicators:", error);
     toast.error(
       (error as { response?: { data?: { message?: string } } })?.response?.data
@@ -919,6 +950,7 @@ export async function createIndicator(
     toast.success("Indicador creado");
     return data ?? null;
   } catch (error: unknown) {
+    if ((error as { __sessionExpired?: boolean })?.__sessionExpired) return null;
     console.error("Error creating indicator:", error);
     toast.error(
       (error as { response?: { data?: { message?: string } } })?.response?.data
@@ -938,6 +970,7 @@ export async function updateIndicator(
     toast.success("Indicador actualizado");
     return true;
   } catch (error: unknown) {
+    if ((error as { __sessionExpired?: boolean })?.__sessionExpired) return false;
     console.error("Error updating indicator:", error);
     toast.error(
       (error as { response?: { data?: { message?: string } } })?.response?.data
@@ -956,6 +989,7 @@ export async function deleteIndicator(
     toast.success("Indicador eliminado");
     return true;
   } catch (error: unknown) {
+    if ((error as { __sessionExpired?: boolean })?.__sessionExpired) return false;
     console.error("Error deleting indicator:", error);
     toast.error(
       (error as { response?: { data?: { message?: string } } })?.response?.data
@@ -983,6 +1017,7 @@ export async function createMeasurement(
     toast.success("Medición registrada");
     return data ?? null;
   } catch (error: unknown) {
+    if ((error as { __sessionExpired?: boolean })?.__sessionExpired) return null;
     console.error("Error creating measurement:", error);
     toast.error(
       (error as { response?: { data?: { message?: string } } })?.response?.data
@@ -1005,6 +1040,7 @@ export async function updateMeasurement(
     toast.success("Medición actualizada");
     return true;
   } catch (error: unknown) {
+    if ((error as { __sessionExpired?: boolean })?.__sessionExpired) return false;
     console.error("Error updating measurement:", error);
     toast.error(
       (error as { response?: { data?: { message?: string } } })?.response?.data
@@ -1025,6 +1061,7 @@ export async function deleteMeasurement(
     toast.success("Medición eliminada");
     return true;
   } catch (error: unknown) {
+    if ((error as { __sessionExpired?: boolean })?.__sessionExpired) return false;
     console.error("Error deleting measurement:", error);
     toast.error(
       (error as { response?: { data?: { message?: string } } })?.response?.data
@@ -1045,6 +1082,7 @@ export async function listStakeholderDofaLinks(): Promise<StakeholderDofaLinkDto
     const { data } = await api.get<unknown>(STAKEHOLDER_DOFA_BASE);
     return extractArray<StakeholderDofaLinkDto>(data);
   } catch (error: unknown) {
+    if ((error as { __sessionExpired?: boolean })?.__sessionExpired) return [];
     console.error("Error fetching stakeholder-dofa links:", error);
     toast.error(
       (error as { response?: { data?: { message?: string } } })?.response?.data
@@ -1065,6 +1103,7 @@ export async function createStakeholderDofaLink(
     toast.success("Vínculo creado");
     return data ?? null;
   } catch (error: unknown) {
+    if ((error as { __sessionExpired?: boolean })?.__sessionExpired) return null;
     console.error("Error creating stakeholder-dofa link:", error);
     toast.error(
       (error as { response?: { data?: { message?: string } } })?.response?.data
@@ -1083,6 +1122,7 @@ export async function updateStakeholderDofaLink(
     toast.success("Vínculo actualizado");
     return true;
   } catch (error: unknown) {
+    if ((error as { __sessionExpired?: boolean })?.__sessionExpired) return false;
     console.error("Error updating stakeholder-dofa link:", error);
     toast.error(
       (error as { response?: { data?: { message?: string } } })?.response?.data
@@ -1098,6 +1138,7 @@ export async function deleteStakeholderDofaLink(linkId: string): Promise<boolean
     toast.success("Vínculo eliminado");
     return true;
   } catch (error: unknown) {
+    if ((error as { __sessionExpired?: boolean })?.__sessionExpired) return false;
     console.error("Error deleting stakeholder-dofa link:", error);
     toast.error(
       (error as { response?: { data?: { message?: string } } })?.response?.data

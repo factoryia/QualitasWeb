@@ -34,6 +34,7 @@ export async function getAllMipgDimensions(): Promise<MipgDimensionDto[]> {
     const { data } = await api.get<MipgDimensionDto[]>(BASE);
     return Array.isArray(data) ? data : [];
   } catch (error: unknown) {
+    if ((error as { __sessionExpired?: boolean })?.__sessionExpired) return [];
     console.error("Error fetching MIPG dimensions:", error);
     toast.error("Error al cargar dimensiones MIPG");
     return [];
@@ -46,6 +47,7 @@ export async function getMipgDimensionById(id: string): Promise<MipgDimensionDto
     const { data } = await api.get<MipgDimensionDto>(`${BASE}/${id}`);
     return data ?? null;
   } catch (error: unknown) {
+    if ((error as { __sessionExpired?: boolean })?.__sessionExpired) return null;
     console.error("Error fetching MIPG dimension:", error);
     toast.error("Error al cargar dimensión MIPG");
     return null;
@@ -59,6 +61,7 @@ export async function createMipgDimension(payload: CreateMipgDimensionCommand): 
     toast.success("Dimensión creada");
     return data ?? null;
   } catch (error: unknown) {
+    if ((error as { __sessionExpired?: boolean })?.__sessionExpired) return null;
     console.error("Error creating MIPG dimension:", error);
     toast.error("Error al crear dimensión MIPG");
     return null;
@@ -72,6 +75,7 @@ export async function updateMipgDimension(id: string, payload: UpdateMipgDimensi
     toast.success("Dimensión actualizada");
     return true;
   } catch (error: unknown) {
+    if ((error as { __sessionExpired?: boolean })?.__sessionExpired) return false;
     console.error("Error updating MIPG dimension:", error);
     toast.error("Error al actualizar dimensión MIPG");
     return false;
@@ -85,6 +89,7 @@ export async function deleteMipgDimension(id: string): Promise<boolean> {
     toast.success("Dimensión eliminada");
     return true;
   } catch (error: unknown) {
+    if ((error as { __sessionExpired?: boolean })?.__sessionExpired) return false;
     console.error("Error deleting MIPG dimension:", error);
     toast.error("Error al eliminar dimensión MIPG");
     return false;

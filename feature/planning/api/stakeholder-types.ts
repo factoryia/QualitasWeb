@@ -37,6 +37,7 @@ export async function getStakeholderTypes(): Promise<StakeholderTypeDto[]> {
     const { data } = await api.get<StakeholderTypeDto[]>(BASE);
     return Array.isArray(data) ? data : [];
   } catch (error: unknown) {
+    if ((error as { __sessionExpired?: boolean })?.__sessionExpired) return [];
     console.error("Error fetching stakeholder types:", error);
     toast.error(
       (error as { response?: { data?: { message?: string } } })?.response?.data
@@ -53,6 +54,7 @@ export async function getStakeholderTypeById(
     const { data } = await api.get<StakeholderTypeDto>(`${BASE}/${id}`);
     return data ?? null;
   } catch (error: unknown) {
+    if ((error as { __sessionExpired?: boolean })?.__sessionExpired) return null;
     console.error("Error fetching stakeholder type:", error);
     toast.error(
       (error as { response?: { data?: { message?: string } } })?.response?.data
@@ -70,6 +72,7 @@ export async function createStakeholderType(
     toast.success("Tipo creado");
     return data ?? null;
   } catch (error: unknown) {
+    if ((error as { __sessionExpired?: boolean })?.__sessionExpired) return null;
     console.error("Error creating stakeholder type:", error);
     toast.error(
       (error as { response?: { data?: { message?: string } } })?.response?.data
@@ -88,6 +91,7 @@ export async function updateStakeholderTypeById(
     toast.success("Tipo actualizado");
     return data ?? null;
   } catch (error: unknown) {
+    if ((error as { __sessionExpired?: boolean })?.__sessionExpired) return null;
     console.error("Error updating stakeholder type:", error);
     toast.error(
       (error as { response?: { data?: { message?: string } } })?.response?.data
@@ -103,6 +107,7 @@ export async function deleteStakeholderTypeById(id: string): Promise<boolean> {
     toast.success("Tipo eliminado");
     return true;
   } catch (error: unknown) {
+    if ((error as { __sessionExpired?: boolean })?.__sessionExpired) return false;
     console.error("Error deleting stakeholder type:", error);
     toast.error(
       (error as { response?: { data?: { message?: string } } })?.response?.data
@@ -111,4 +116,3 @@ export async function deleteStakeholderTypeById(id: string): Promise<boolean> {
     return false;
   }
 }
-

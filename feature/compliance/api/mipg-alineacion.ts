@@ -39,10 +39,11 @@ export async function getMipgGuidelineRequirements(
     const params: Record<string, string | boolean> = { includeInactive };
     if (mipgGuidelineId) params.mipgGuidelineId = mipgGuidelineId;
     if (requirementClauseId) params.requirementClauseId = requirementClauseId;
-    
+
     const { data } = await api.get<MipgGuidelineRequirementClauseDto[]>(BASE, { params });
     return Array.isArray(data) ? data : [];
   } catch (error: unknown) {
+    if ((error as { __sessionExpired?: boolean })?.__sessionExpired) return [];
     console.error("Error fetching MIPG guideline requirements:", error);
     // toast.error("Error al cargar relaciones MIPG-Requisitos");
     return [];
@@ -55,6 +56,7 @@ export async function getMipgGuidelineRequirementById(id: string): Promise<MipgG
     const { data } = await api.get<MipgGuidelineRequirementClauseDto>(`${BASE}/${id}`);
     return data ?? null;
   } catch (error: unknown) {
+    if ((error as { __sessionExpired?: boolean })?.__sessionExpired) return null;
     console.error("Error fetching MIPG guideline requirement:", error);
     toast.error("Error al cargar relación MIPG-Requisito");
     return null;
@@ -70,6 +72,7 @@ export async function createMipgGuidelineRequirement(
     toast.success("Relación creada");
     return data ?? null;
   } catch (error: unknown) {
+    if ((error as { __sessionExpired?: boolean })?.__sessionExpired) return null;
     console.error("Error creating MIPG guideline requirement:", error);
     toast.error("Error al crear relación MIPG-Requisito");
     return null;
@@ -86,6 +89,7 @@ export async function updateMipgGuidelineRequirement(
     toast.success("Relación actualizada");
     return true;
   } catch (error: unknown) {
+    if ((error as { __sessionExpired?: boolean })?.__sessionExpired) return false;
     console.error("Error updating MIPG guideline requirement:", error);
     toast.error("Error al actualizar relación MIPG-Requisito");
     return false;
@@ -99,6 +103,7 @@ export async function deleteMipgGuidelineRequirement(id: string): Promise<boolea
     toast.success("Relación eliminada");
     return true;
   } catch (error: unknown) {
+    if ((error as { __sessionExpired?: boolean })?.__sessionExpired) return false;
     console.error("Error deleting MIPG guideline requirement:", error);
     toast.error("Error al eliminar relación MIPG-Requisito");
     return false;

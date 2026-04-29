@@ -1,12 +1,13 @@
 import { useAuthStore } from "@/feature/auth/store/auth.store";
 import { authSession } from "@/feature/auth/api/logout";
 import axios from "axios";
+import toast from "react-hot-toast";
 
 const baseURL =
   process.env.NEXT_PUBLIC_BACKEND_API_BASE_URL || "http://localhost:5030";
 
 export const api = axios.create({
-  baseURL: "https://qualitasnexus-web-develop.azurewebsites.net",
+  baseURL,
   headers: {
     "Content-Type": "application/json",
   },
@@ -111,19 +112,24 @@ api.interceptors.response.use(
         } else {
           // Token refresh failed - logout user
           useAuthStore.getState().setRefreshingToken(false);
+          toast.dismiss();
           await authSession.logoutOnAuthError(401);
           isRedirecting = false;
+          (error as any).__sessionExpired = true;
         }
       } catch (refreshError) {
-        console.error("[AXIOS] Token refresh error:", refreshError);
         useAuthStore.getState().setRefreshingToken(false);
+        toast.dismiss();
         await authSession.logoutOnAuthError(401);
         isRedirecting = false;
+        (error as any).__sessionExpired = true;
       }
     } else if (error.response?.status === 403 && !isRedirecting) {
       // 403 Forbidden - no token refresh, just logout
       isRedirecting = true;
+      toast.dismiss();
       await authSession.logoutOnAuthError(403);
+      (error as any).__sessionExpired = true;
 
       // Reset redirect flag after 1 second
       setTimeout(() => {

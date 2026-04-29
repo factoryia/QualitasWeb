@@ -47,6 +47,7 @@ export async function getAllMarcosNormativos(includeInactive: boolean): Promise<
     });
     return Array.isArray(data) ? data : [];
   } catch (error: unknown) {
+    if ((error as { __sessionExpired?: boolean })?.__sessionExpired) return [];
     console.error("Error fetching marcos normativos:", error);
     toast.error((error as { response?: { data?: { message?: string } } })?.response?.data?.message || "Error al cargar marcos normativos");
     return [];
@@ -60,6 +61,7 @@ export async function createMarcoNormativo(payload: CreateMarcoNormativoCommand)
     toast.success("Marco normativo creado");
     return data ?? null;
   } catch (error: unknown) {
+    if ((error as { __sessionExpired?: boolean })?.__sessionExpired) return null;
     console.error("Error creating marco normativo:", error);
     toast.error((error as { response?: { data?: { message?: string } } })?.response?.data?.message || "Error al crear marco normativo");
     return null;
@@ -72,6 +74,7 @@ export async function getMarcoNormativoById(id: string): Promise<MarcoNormativoD
     const { data } = await api.get<MarcoNormativoDto>(`${BASE}/${id}`);
     return data ?? null;
   } catch (error: unknown) {
+    if ((error as { __sessionExpired?: boolean })?.__sessionExpired) return null;
     console.error("Error fetching marco normativo:", error);
     toast.error((error as { response?: { data?: { message?: string } } })?.response?.data?.message || "Error al cargar marco normativo");
     return null;
@@ -85,6 +88,7 @@ export async function updateMarcoNormativoById(id: string, payload: UpdateMarcoN
     toast.success("Marco normativo actualizado");
     return true;
   } catch (error: unknown) {
+    if ((error as { __sessionExpired?: boolean })?.__sessionExpired) return false;
     console.error("Error updating marco normativo:", error);
     toast.error((error as { response?: { data?: { message?: string } } })?.response?.data?.message || "Error al actualizar marco normativo");
     return false;
@@ -98,6 +102,7 @@ export async function deleteMarcoNormativo(id: string): Promise<boolean> {
     toast.success("Marco normativo eliminado");
     return true;
   } catch (error: unknown) {
+    if ((error as { __sessionExpired?: boolean })?.__sessionExpired) return false;
     console.error("Error deleting marco normativo:", error);
     toast.error((error as { response?: { data?: { message?: string } } })?.response?.data?.message || "Error al eliminar marco normativo");
     return false;
@@ -115,6 +120,7 @@ export async function getRequirementsByFramework(
     });
     return Array.isArray(data) ? data : [];
   } catch (error: unknown) {
+    if ((error as { __sessionExpired?: boolean })?.__sessionExpired) return [];
     console.error("Error fetching requirements by framework:", error);
     toast.error((error as { response?: { data?: { message?: string } } })?.response?.data?.message || "Error al cargar requisitos del marco");
     return [];

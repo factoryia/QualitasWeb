@@ -69,7 +69,7 @@ export const authApi = {
 
       return data;
     } catch (error) {
-      console.error("[AUTH] Token refresh failed:", error);
+      console.warn("[AUTH] Token refresh expired (expected):", error);
       return null;
     }
   },

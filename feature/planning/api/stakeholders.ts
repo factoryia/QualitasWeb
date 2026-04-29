@@ -63,6 +63,7 @@ export async function getStakeholders(): Promise<StakeholderDto[]> {
     const { data } = await api.get<StakeholderDto[]>(BASE);
     return Array.isArray(data) ? data : [];
   } catch (error: unknown) {
+    if ((error as { __sessionExpired?: boolean })?.__sessionExpired) return [];
     console.error("Error fetching stakeholders:", error);
     toast.error(
       (error as { response?: { data?: { message?: string } } })?.response?.data
@@ -79,6 +80,7 @@ export async function getStakeholderById(
     const { data } = await api.get<StakeholderDto>(`${BASE}/${id}`);
     return data ?? null;
   } catch (error: unknown) {
+    if ((error as { __sessionExpired?: boolean })?.__sessionExpired) return null;
     console.error("Error fetching stakeholder:", error);
     toast.error(
       (error as { response?: { data?: { message?: string } } })?.response?.data
@@ -96,6 +98,7 @@ export async function createStakeholder(
     toast.success("Parte interesada creada");
     return data ?? null;
   } catch (error: unknown) {
+    if ((error as { __sessionExpired?: boolean })?.__sessionExpired) return null;
     console.error("Error creating stakeholder:", error);
     toast.error(
       (error as { response?: { data?: { message?: string } } })?.response?.data
@@ -114,6 +117,7 @@ export async function updateStakeholderById(
     toast.success("Parte interesada actualizada");
     return data ?? null;
   } catch (error: unknown) {
+    if ((error as { __sessionExpired?: boolean })?.__sessionExpired) return null;
     console.error("Error updating stakeholder:", error);
     toast.error(
       (error as { response?: { data?: { message?: string } } })?.response?.data
@@ -129,6 +133,7 @@ export async function deleteStakeholderById(id: string): Promise<boolean> {
     toast.success("Parte interesada eliminada");
     return true;
   } catch (error: unknown) {
+    if ((error as { __sessionExpired?: boolean })?.__sessionExpired) return false;
     console.error("Error deleting stakeholder:", error);
     toast.error(
       (error as { response?: { data?: { message?: string } } })?.response?.data
@@ -137,4 +142,3 @@ export async function deleteStakeholderById(id: string): Promise<boolean> {
     return false;
   }
 }
-

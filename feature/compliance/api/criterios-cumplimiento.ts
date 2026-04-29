@@ -50,6 +50,7 @@ export async function getAllCriteriosCumplimiento(
     });
     return Array.isArray(data) ? data : [];
   } catch (error: unknown) {
+    if ((error as { __sessionExpired?: boolean })?.__sessionExpired) return [];
     console.error("Error fetching criterios de cumplimiento:", error);
     toast.error((error as { response?: { data?: { message?: string } } })?.response?.data?.message || "Error al cargar criterios de cumplimiento");
     return [];
@@ -63,6 +64,7 @@ export async function createCriterioCumplimiento(payload: CreateCriterioCumplimi
     toast.success("Criterio de cumplimiento creado");
     return data ?? null;
   } catch (error: unknown) {
+    if ((error as { __sessionExpired?: boolean })?.__sessionExpired) return null;
     console.error("Error creating criterio de cumplimiento:", error);
     toast.error((error as { response?: { data?: { message?: string } } })?.response?.data?.message || "Error al crear criterio de cumplimiento");
     return null;
@@ -75,6 +77,7 @@ export async function getCriterioCumplimientoById(id: string): Promise<CriterioC
     const { data } = await api.get<CriterioCumplimientoDto>(`${BASE}/${id}`);
     return data ?? null;
   } catch (error: unknown) {
+    if ((error as { __sessionExpired?: boolean })?.__sessionExpired) return null;
     console.error("Error fetching criterio de cumplimiento:", error);
     toast.error((error as { response?: { data?: { message?: string } } })?.response?.data?.message || "Error al cargar criterio de cumplimiento");
     return null;
@@ -88,6 +91,7 @@ export async function updateCriterioCumplimientoById(id: string, payload: Update
     toast.success("Criterio de cumplimiento actualizado");
     return true;
   } catch (error: unknown) {
+    if ((error as { __sessionExpired?: boolean })?.__sessionExpired) return false;
     console.error("Error updating criterio de cumplimiento:", error);
     toast.error((error as { response?: { data?: { message?: string } } })?.response?.data?.message || "Error al actualizar criterio de cumplimiento");
     return false;
@@ -101,6 +105,7 @@ export async function deleteCriterioCumplimiento(id: string): Promise<boolean> {
     toast.success("Criterio de cumplimiento eliminado");
     return true;
   } catch (error: unknown) {
+    if ((error as { __sessionExpired?: boolean })?.__sessionExpired) return false;
     console.error("Error deleting criterio de cumplimiento:", error);
     toast.error((error as { response?: { data?: { message?: string } } })?.response?.data?.message || "Error al eliminar criterio de cumplimiento");
     return false;

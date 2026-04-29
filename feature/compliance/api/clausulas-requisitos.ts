@@ -53,6 +53,7 @@ export async function getAllClausulasRequisitos(
     });
     return Array.isArray(data) ? data : [];
   } catch (error: unknown) {
+    if ((error as { __sessionExpired?: boolean })?.__sessionExpired) return [];
     console.error("Error fetching cláusulas/requisitos:", error);
     toast.error((error as { response?: { data?: { message?: string } } })?.response?.data?.message || "Error al cargar cláusulas/requisitos");
     return [];
@@ -66,6 +67,7 @@ export async function createClausulaRequisito(payload: CreateClausulaRequisitoCo
     toast.success("Cláusula/requisito creado");
     return data ?? null;
   } catch (error: unknown) {
+    if ((error as { __sessionExpired?: boolean })?.__sessionExpired) return null;
     console.error("Error creating cláusula/requisito:", error);
     toast.error((error as { response?: { data?: { message?: string } } })?.response?.data?.message || "Error al crear cláusula/requisito");
     return null;
@@ -78,6 +80,7 @@ export async function getClausulaRequisitoById(id: string): Promise<ClausulaRequ
     const { data } = await api.get<ClausulaRequisitoDto>(`${BASE}/${id}`);
     return data ?? null;
   } catch (error: unknown) {
+    if ((error as { __sessionExpired?: boolean })?.__sessionExpired) return null;
     console.error("Error fetching cláusula/requisito:", error);
     toast.error((error as { response?: { data?: { message?: string } } })?.response?.data?.message || "Error al cargar cláusula/requisito");
     return null;
@@ -91,6 +94,7 @@ export async function updateClausulaRequisitoById(id: string, payload: UpdateCla
     toast.success("Cláusula/requisito actualizado");
     return true;
   } catch (error: unknown) {
+    if ((error as { __sessionExpired?: boolean })?.__sessionExpired) return false;
     console.error("Error updating cláusula/requisito:", error);
     toast.error((error as { response?: { data?: { message?: string } } })?.response?.data?.message || "Error al actualizar cláusula/requisito");
     return false;
@@ -104,6 +108,7 @@ export async function deleteClausulaRequisito(id: string): Promise<boolean> {
     toast.success("Cláusula/requisito eliminado");
     return true;
   } catch (error: unknown) {
+    if ((error as { __sessionExpired?: boolean })?.__sessionExpired) return false;
     console.error("Error deleting cláusula/requisito:", error);
     toast.error((error as { response?: { data?: { message?: string } } })?.response?.data?.message || "Error al eliminar cláusula/requisito");
     return false;
@@ -120,6 +125,7 @@ export async function associateRequirementToFrameworks(
     toast.success("Marcos normativos asociados exitosamente");
     return true;
   } catch (error: unknown) {
+    if ((error as { __sessionExpired?: boolean })?.__sessionExpired) return false;
     console.error("Error associating requirement:", error);
     toast.error(
       (error as { response?: { data?: { message?: string } } })?.response?.data?.message ||
@@ -142,6 +148,7 @@ export async function disassociateRequirementFromFramework(
     toast.success("Requisito excluido correctamente");
     return true;
   } catch (error: unknown) {
+    if ((error as { __sessionExpired?: boolean })?.__sessionExpired) return false;
     console.error("Error disassociating requirement:", error);
     toast.error(
       (error as { response?: { data?: { message?: string } } })?.response?.data?.message ||

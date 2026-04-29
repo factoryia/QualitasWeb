@@ -36,10 +36,11 @@ export async function getAllMipgGuidelines(policyId?: string, includeInactive: b
     }
     const params: Record<string, string | boolean> = { includeInactive };
     if (policyId) params.policyId = policyId;
-    
+
     const { data } = await api.get<MipgGuidelineDto[]>(BASE, { params });
     return Array.isArray(data) ? data : [];
   } catch (error: unknown) {
+    if ((error as { __sessionExpired?: boolean })?.__sessionExpired) return [];
     console.error("Error fetching MIPG guidelines:", error);
     // toast.error("Error al cargar lineamientos MIPG");
     return [];
@@ -52,6 +53,7 @@ export async function getMipgGuidelineById(id: string): Promise<MipgGuidelineDto
     const { data } = await api.get<MipgGuidelineDto>(`${BASE}/${id}`);
     return data ?? null;
   } catch (error: unknown) {
+    if ((error as { __sessionExpired?: boolean })?.__sessionExpired) return null;
     console.error("Error fetching MIPG guideline:", error);
     toast.error("Error al cargar lineamiento MIPG");
     return null;
@@ -65,6 +67,7 @@ export async function createMipgGuideline(payload: CreateMipgGuidelineCommand): 
     toast.success("Lineamiento creado");
     return data ?? null;
   } catch (error: unknown) {
+    if ((error as { __sessionExpired?: boolean })?.__sessionExpired) return null;
     console.error("Error creating MIPG guideline:", error);
     toast.error("Error al crear lineamiento MIPG");
     return null;
@@ -78,6 +81,7 @@ export async function updateMipgGuideline(id: string, payload: UpdateMipgGuideli
     toast.success("Lineamiento actualizado");
     return true;
   } catch (error: unknown) {
+    if ((error as { __sessionExpired?: boolean })?.__sessionExpired) return false;
     console.error("Error updating MIPG guideline:", error);
     toast.error("Error al actualizar lineamiento MIPG");
     return false;
@@ -91,6 +95,7 @@ export async function deleteMipgGuideline(id: string): Promise<boolean> {
     toast.success("Lineamiento eliminado");
     return true;
   } catch (error: unknown) {
+    if ((error as { __sessionExpired?: boolean })?.__sessionExpired) return false;
     console.error("Error deleting MIPG guideline:", error);
     toast.error("Error al eliminar lineamiento MIPG");
     return false;
