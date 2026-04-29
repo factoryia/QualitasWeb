@@ -34,9 +34,17 @@ import {
 } from "./perspective-icons";
 import {
   EMPTY_PERSPECTIVE_DRAFT,
-  PerspectiveUpsertDialog,
+  PerspectiveUpsertForm,
   type PerspectiveUpsertDraft,
-} from "./perspective-upsert-dialog";
+} from "./perspective-upsert-form";
+
+// ---------------------------------------------------------------------------
+// Helpers
+// ---------------------------------------------------------------------------
+
+function abbreviateCode(code: string): string {
+  return code.length > 5 ? code.substring(0, 4) : code;
+}
 
 // ---------------------------------------------------------------------------
 // PerspectiveManager
@@ -47,21 +55,18 @@ type Props = {
   items?: Pick<DofaItemDto, "bscPerspectiveId" | "perspective">[];
 };
 
-function abbreviateCode(code: string): string {
-  return code.length > 5 ? code.substring(0, 4) : code;
-}
-
 export function PerspectiveManager({ items }: Props) {
   const { data: perspectives = [], isLoading } = useBscPerspectivesQuery();
   const createMutation = useBscPerspectiveCreateMutation();
   const updateMutation = useBscPerspectiveUpdateMutation();
   const deleteMutation = useBscPerspectiveDeleteMutation();
 
-  const [dialogOpen, setDialogOpen] = useState(false);
-  const [dialogMode, setDialogMode] = useState<"create" | "edit">("create");
+  // Inline form state — null means list view
+  const [mode, setMode] = useState<"create" | "edit" | null>(null);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editingIsStandard, setEditingIsStandard] = useState(false);
   const [draft, setDraft] = useState<PerspectiveUpsertDraft>(EMPTY_PERSPECTIVE_DRAFT);
+
   const [deletingPerspective, setDeletingPerspective] =
     useState<BscPerspectiveDto | null>(null);
 
@@ -71,18 +76,21 @@ export function PerspectiveManager({ items }: Props) {
     updateMutation.isPending ||
     deleteMutation.isPending;
 
-  const openCreate = () => {
-    setDialogMode("create");
+  const closeForm = () => {
+    setMode(null);
     setEditingId(null);
     setEditingIsStandard(false);
     setDraft(EMPTY_PERSPECTIVE_DRAFT);
-    setDialogOpen(true);
+  };
+
+  const openCreate = () => {
+    setDraft(EMPTY_PERSPECTIVE_DRAFT);
+    setEditingId(null);
+    setEditingIsStandard(false);
+    setMode("create");
   };
 
   const openEdit = (p: BscPerspectiveDto) => {
-    setDialogMode("edit");
-    setEditingId(p.id);
-    setEditingIsStandard(isStandardPerspective(p));
     setDraft({
       code: p.code ?? "",
       name: p.name,
@@ -90,11 +98,13 @@ export function PerspectiveManager({ items }: Props) {
       color: p.color ?? COLOR_PRESETS[1],
       icon: p.icon ?? "compass",
     });
-    setDialogOpen(true);
+    setEditingId(p.id);
+    setEditingIsStandard(isStandardPerspective(p));
+    setMode("edit");
   };
 
   const handleSave = async () => {
-    if (dialogMode === "create") {
+    if (mode === "create") {
       const nextOrder =
         perspectives.length > 0
           ? Math.max(...perspectives.map((p) => p.order ?? 0)) + 1
@@ -108,8 +118,8 @@ export function PerspectiveManager({ items }: Props) {
         order: nextOrder,
       };
       const created = await createMutation.mutateAsync(payload);
-      if (created) setDialogOpen(false);
-    } else if (editingId) {
+      if (created) closeForm();
+    } else if (mode === "edit" && editingId) {
       const editing = perspectives.find((p) => p.id === editingId);
       const payload: UpdateBscPerspectiveCommand = {
         name: draft.name.trim(),
@@ -119,12 +129,12 @@ export function PerspectiveManager({ items }: Props) {
         order: editing?.order ?? 0,
       };
       const ok = await updateMutation.mutateAsync({ perspectiveId: editingId, payload });
-      if (ok) setDialogOpen(false);
+      if (ok) closeForm();
     }
   };
 
   const handleDeleteClick = (p: BscPerspectiveDto) => {
-    if (isStandardPerspective(p)) return; // button should be hidden, but guard anyway
+    if (isStandardPerspective(p)) return;
     const hasItems = (items ?? []).some(
       (i) => (i.bscPerspectiveId ?? i.perspective) === p.id,
     );
@@ -151,60 +161,77 @@ export function PerspectiveManager({ items }: Props) {
           const Icon = resolveIcon(p);
           const isStd = isStandardPerspective(p);
           const accentColor = p.color ?? COLOR_PRESETS[1];
+          const isBeingEdited = mode === "edit" && editingId === p.id;
           return (
-            <div
-              key={p.id}
-              className="flex items-center gap-3 rounded-lg border px-3 py-2 hover:bg-muted/30 transition-colors"
-            >
-              {/* Colored icon */}
+            <div key={p.id}>
               <div
-                className="flex h-8 w-8 items-center justify-center rounded-md shrink-0"
-                style={{ backgroundColor: `${accentColor}20`, color: accentColor }}
+                className="flex items-center gap-3 rounded-lg border px-3 py-2 hover:bg-muted/30 transition-colors"
               >
-                <Icon className="h-4 w-4" />
-              </div>
-
-              {/* Name + badges */}
-              <div className="flex-1 min-w-0">
-                <div className="flex items-center gap-1.5">
-                  <span className="text-sm font-medium truncate">{p.name}</span>
-                  {p.code && (
-                    <Badge variant="outline" className="text-[10px] px-1 py-0 font-mono shrink-0">
-                      {abbreviateCode(p.code)}
-                    </Badge>
-                  )}
-                  {isStd && <Lock className="h-3 w-3 text-muted-foreground shrink-0" />}
-                </div>
-                {p.description && (
-                  <p className="text-[11px] text-muted-foreground truncate mt-0.5">
-                    {p.description}
-                  </p>
-                )}
-              </div>
-
-              {/* Actions */}
-              <div className="flex items-center gap-0.5 shrink-0">
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="h-7 w-7"
-                  onClick={() => openEdit(p)}
-                  disabled={isBusy}
+                {/* Colored icon */}
+                <div
+                  className="flex h-8 w-8 items-center justify-center rounded-md shrink-0"
+                  style={{ backgroundColor: `${accentColor}20`, color: accentColor }}
                 >
-                  <Pencil className="h-3.5 w-3.5" />
-                </Button>
-                {!isStd && (
+                  <Icon className="h-4 w-4" />
+                </div>
+
+                {/* Name + badges */}
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-1.5">
+                    <span className="text-sm font-medium truncate">{p.name}</span>
+                    {p.code && (
+                      <Badge variant="outline" className="text-[10px] px-1 py-0 font-mono shrink-0">
+                        {abbreviateCode(p.code)}
+                      </Badge>
+                    )}
+                    {isStd && <Lock className="h-3 w-3 text-muted-foreground shrink-0" />}
+                  </div>
+                  {p.description && (
+                    <p className="text-[11px] text-muted-foreground truncate mt-0.5">
+                      {p.description}
+                    </p>
+                  )}
+                </div>
+
+                {/* Actions */}
+                <div className="flex items-center gap-0.5 shrink-0">
                   <Button
                     variant="ghost"
                     size="icon"
-                    className="h-7 w-7 text-destructive hover:text-destructive"
-                    onClick={() => handleDeleteClick(p)}
+                    className="h-7 w-7"
+                    onClick={() => isBeingEdited ? closeForm() : openEdit(p)}
                     disabled={isBusy}
                   >
-                    <Trash2 className="h-3.5 w-3.5" />
+                    <Pencil className="h-3.5 w-3.5" />
                   </Button>
-                )}
+                  {!isStd && (
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-7 w-7 text-destructive hover:text-destructive"
+                      onClick={() => handleDeleteClick(p)}
+                      disabled={isBusy}
+                    >
+                      <Trash2 className="h-3.5 w-3.5" />
+                    </Button>
+                  )}
+                </div>
               </div>
+
+              {/* Inline edit form — rendered directly below the row */}
+              {isBeingEdited && (
+                <div className="mt-1">
+                  <PerspectiveUpsertForm
+                    mode="edit"
+                    isStandard={editingIsStandard}
+                    draft={draft}
+                    onChange={(patch) => setDraft((d) => ({ ...d, ...patch }))}
+                    onSave={handleSave}
+                    onCancel={closeForm}
+                    isBusy={isBusy}
+                  />
+                </div>
+              )}
             </div>
           );
         })}
@@ -216,22 +243,30 @@ export function PerspectiveManager({ items }: Props) {
         )}
       </div>
 
-      {/* Create button */}
-      <Button variant="outline" size="sm" className="gap-1.5 w-full" onClick={openCreate} disabled={isBusy}>
-        <Plus className="h-3.5 w-3.5" /> Nueva perspectiva
-      </Button>
+      {/* Inline create form */}
+      {mode === "create" && (
+        <PerspectiveUpsertForm
+          mode="create"
+          draft={draft}
+          onChange={(patch) => setDraft((d) => ({ ...d, ...patch }))}
+          onSave={handleSave}
+          onCancel={closeForm}
+          isBusy={isBusy}
+        />
+      )}
 
-      {/* Upsert dialog */}
-      <PerspectiveUpsertDialog
-        open={dialogOpen}
-        onOpenChange={setDialogOpen}
-        mode={dialogMode}
-        isStandard={editingIsStandard}
-        draft={draft}
-        onChange={(patch) => setDraft((d) => ({ ...d, ...patch }))}
-        onSave={handleSave}
-        isBusy={isBusy}
-      />
+      {/* Create button — hidden while form is open */}
+      {mode === null && (
+        <Button
+          variant="outline"
+          size="sm"
+          className="gap-1.5 w-full"
+          onClick={openCreate}
+          disabled={isBusy}
+        >
+          <Plus className="h-3.5 w-3.5" /> Nueva perspectiva
+        </Button>
+      )}
 
       {/* Delete confirm */}
       <AlertDialog
