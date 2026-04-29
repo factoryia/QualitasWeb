@@ -4,7 +4,8 @@ import axios from "axios";
 import toast from "react-hot-toast";
 
 const baseURL =
-  process.env.NEXT_PUBLIC_BACKEND_API_BASE_URL || "http://localhost:5030";
+  process.env.NEXT_PUBLIC_BACKEND_API_BASE_URL ||
+  "https://qualitasnexus-web-develop.azurewebsites.net";
 
 export const api = axios.create({
   baseURL,
