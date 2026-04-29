@@ -47,6 +47,10 @@ type Props = {
   items?: Pick<DofaItemDto, "bscPerspectiveId" | "perspective">[];
 };
 
+function abbreviateCode(code: string): string {
+  return code.length > 5 ? code.substring(0, 4) : code;
+}
+
 export function PerspectiveManager({ items }: Props) {
   const { data: perspectives = [], isLoading } = useBscPerspectivesQuery();
   const createMutation = useBscPerspectiveCreateMutation();
@@ -166,7 +170,7 @@ export function PerspectiveManager({ items }: Props) {
                   <span className="text-sm font-medium truncate">{p.name}</span>
                   {p.code && (
                     <Badge variant="outline" className="text-[10px] px-1 py-0 font-mono shrink-0">
-                      {p.code}
+                      {abbreviateCode(p.code)}
                     </Badge>
                   )}
                   {isStd && <Lock className="h-3 w-3 text-muted-foreground shrink-0" />}
