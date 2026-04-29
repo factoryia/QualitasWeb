@@ -31,8 +31,7 @@ export function MatrixTable({ perspectives, grouped, onAdd, onUpdate, onDelete, 
                   key={q.category}
                   className={cn(
                     "text-left text-[11px] font-bold uppercase tracking-wide px-3 py-2 border-b border-r last:border-r-0 min-w-[180px]",
-                    q.textClass,
-                    "bg-muted/40",
+                    q.headerBgClass,
                   )}
                 >
                   <span className="inline-flex items-center gap-1.5">
@@ -52,7 +51,7 @@ export function MatrixTable({ perspectives, grouped, onAdd, onUpdate, onDelete, 
                 {QUADRANTS.map((q) => {
                   const list = grouped[p.key]?.[q.category] ?? [];
                   return (
-                    <td key={q.category} className="p-1.5 border-r last:border-r-0 align-top">
+                    <td key={q.category} className={cn("p-1.5 border-r last:border-r-0 align-top", q.cellBgClass)}>
                       <div className="flex flex-col gap-1">
                         {list.map((item) => (
                           <ItemCard

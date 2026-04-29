@@ -59,11 +59,11 @@ export function MatrixMobileCards({ perspectives, grouped, onAdd, onUpdate, onDe
                   {QUADRANTS.map((q) => {
                     const list = grouped[p.key]?.[q.category] ?? [];
                     return (
-                      <div key={q.category} className="space-y-1.5">
-                        <div className={cn("flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-wide pt-2", q.textClass)}>
+                      <div key={q.category} className={cn("space-y-1.5 rounded-md p-1.5 -mx-1.5", q.cellBgClass)}>
+                        <div className={cn("inline-flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-wide rounded px-1.5 py-0.5 mt-0.5", q.headerBgClass)}>
                           <span className={cn("h-1.5 w-1.5 rounded-full", q.fillClass)} />
                           {q.label}
-                          <span className="text-muted-foreground font-normal normal-case">({list.length})</span>
+                          <span className="font-normal normal-case opacity-70">({list.length})</span>
                         </div>
                         <div className="space-y-1">
                           {list.map((item) => (
