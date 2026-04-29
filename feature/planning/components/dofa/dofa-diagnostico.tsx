@@ -186,7 +186,8 @@ export function DofaDiagnostico({ analysisId, readOnly = false }: Props) {
     );
   }
 
-  const activeP = perspectives.find((p) => p.key === activePerspective);
+  const activeP =
+    perspectives.find((p) => p.key === activePerspective) ?? perspectives[0];
 
   return (
     <div className="flex flex-col md:flex-row gap-4 p-3 sm:p-4">
