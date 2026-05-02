@@ -6,13 +6,18 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
-import type { DofaItemDto } from "@/feature/planning/api/dofa";
+import type { DofaItemDto, StrategyDto, StrategyTypeDto } from "@/feature/planning/api/dofa";
 import {
   useDofaAnalysisQuery,
   useBscPerspectivesQuery,
+  useStrategiesQuery,
+  useStrategyTypesQuery,
 } from "@/feature/planning/hooks/use-dofa";
 import { DofaDiagnostico } from "./dofa-diagnostico";
 import { DofaSettingsSheet } from "./dofa-settings-sheet";
+import { EstrategiaList } from "./estrategia-list";
+import { StrategyPanel } from "./strategy-panel";
+import { mapStrategicTypeIdToCode, STRATEGY_CODES } from "./strategy-types-helpers";
 
 // ---------------------------------------------------------------------------
 // Types & constants
@@ -84,7 +89,8 @@ const PHASES: PhaseConfig[] = [
 function usePhaseProgress(
   analysisId: string,
   items: DofaItemDto[],
-  status: string | null | undefined,
+  strategies: StrategyDto[] | undefined,
+  strategyTypes: StrategyTypeDto[] | undefined,
 ) {
   const { data: bscPerspectives = [] } = useBscPerspectivesQuery();
 
@@ -116,8 +122,18 @@ function usePhaseProgress(
         ? 0
         : Math.round((filledPerspectives / perspectiveKeys.length) * 100);
 
-    // Phase 2 & 3: placeholder (Sprint 2/3)
-    const phase2Progress = 0;
+    // Phase 2: % of the 4 cross-types (FO/DO/FA/DA) that have ≥1 strategy in this analysis
+    const filteredStrategies = (strategies ?? []).filter(
+      (s) => s.dofaAnalysisId === analysisId,
+    );
+    const codesPresent = new Set(
+      filteredStrategies
+        .map((s) => mapStrategicTypeIdToCode(s.strategicTypeId, strategyTypes ?? []))
+        .filter((c): c is (typeof STRATEGY_CODES)[number] => c !== null),
+    );
+    const phase2Progress = Math.round((codesPresent.size / 4) * 100);
+
+    // Phase 3: placeholder (Sprint 3)
     const phase3Progress = 0;
 
     return {
@@ -127,14 +143,14 @@ function usePhaseProgress(
       },
       2: {
         progress: phase2Progress,
-        subtext: "0 estrategias · 0 objetivos",
+        subtext: `${filteredStrategies.length} ${filteredStrategies.length === 1 ? "estrategia" : "estrategias"} · ${codesPresent.size}/4 tipos`,
       },
       3: {
         progress: phase3Progress,
         subtext: "0 iniciados · 0 objetivos",
       },
     } as Record<Phase, { progress: number; subtext: string }>;
-  }, [items, bscPerspectives, analysisId]);
+  }, [items, bscPerspectives, analysisId, strategies, strategyTypes]);
 }
 
 // ---------------------------------------------------------------------------
@@ -150,10 +166,14 @@ export function DofaDetail({ analysisId, onBack }: Props) {
   const analysisQuery = useDofaAnalysisQuery(analysisId);
   const [activePhase, setActivePhase] = useState<Phase>(1);
   const [settingsOpen, setSettingsOpen] = useState(false);
+  const [selectedStrategyId, setSelectedStrategyId] = useState<string | null>(null);
+
+  const { data: strategies } = useStrategiesQuery(analysisId);
+  const { data: strategyTypes } = useStrategyTypesQuery();
 
   const analysis = analysisQuery.data;
   const items = analysis?.items ?? [];
-  const phaseData = usePhaseProgress(analysisId, items, analysis?.status);
+  const phaseData = usePhaseProgress(analysisId, items, strategies, strategyTypes);
 
   const isReadOnly = analysis?.status === "approved" || analysis?.status === "archived";
 
@@ -313,9 +333,19 @@ export function DofaDetail({ analysisId, onBack }: Props) {
           <DofaDiagnostico analysisId={analysisId} readOnly={isReadOnly} />
         )}
         {activePhase === 2 && (
-          <div className="p-10 text-center text-sm text-muted-foreground">
-            Fase 2 — Estrategias (próximamente en Sprint 2)
-          </div>
+          <>
+            <EstrategiaList
+              analysisId={analysisId}
+              onSelectStrategy={(id) => setSelectedStrategyId(id)}
+              readOnly={isReadOnly}
+            />
+            <StrategyPanel
+              strategyId={selectedStrategyId}
+              analysisId={analysisId}
+              onClose={() => setSelectedStrategyId(null)}
+              readOnly={isReadOnly}
+            />
+          </>
         )}
         {activePhase === 3 && (
           <div className="p-10 text-center text-sm text-muted-foreground">
