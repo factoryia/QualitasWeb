@@ -33,7 +33,7 @@ export interface UpdateBscPerspectiveCommand {
 }
 
 // ---------------------------------------------------------------------------
-// Strategies
+// Strategy Types
 // ---------------------------------------------------------------------------
 
 export interface StrategyTypeDto {
@@ -41,6 +41,13 @@ export interface StrategyTypeDto {
   code: string;
   name: string;
 }
+
+/** Alias used by strategy-types-helpers.ts */
+export type StrategyType = StrategyTypeDto;
+
+// ---------------------------------------------------------------------------
+// Strategies
+// ---------------------------------------------------------------------------
 
 export interface StrategyDto {
   id: string;
@@ -51,6 +58,11 @@ export interface StrategyDto {
   status: string;
   progressPercentage: number;
   responsibleId?: string | null;
+  version?: number;
+  createdOnUtc?: string | null;
+  createdBy?: string | null;
+  lastModifiedOnUtc?: string | null;
+  lastModifiedBy?: string | null;
 }
 
 export interface CreateStrategyCommand {
@@ -59,6 +71,7 @@ export interface CreateStrategyCommand {
   dofaAnalysisId: string;
   strategicTypeId: string;
   responsibleId?: string | null;
+  // NOTE: do NOT send `status` — backend ignores it (PM-05)
 }
 
 export interface UpdateStrategyCommand {
@@ -66,6 +79,14 @@ export interface UpdateStrategyCommand {
   title: string;
   description?: string | null;
   responsibleId?: string | null;
+  // NOTE: do NOT send `status`, `dofaAnalysisId`, or `strategicTypeId` (PM-05)
+}
+
+export interface ListStrategiesFilters {
+  dofaAnalysisId?: string;
+  strategicType?: string;
+  status?: string;
+  responsibleId?: string;
 }
 
 export interface StrategyDofaItemLinkDto {
@@ -76,6 +97,34 @@ export interface StrategyDofaItemLinkDto {
   category?: string | null;
   description?: string | null;
   perspectiveName?: string | null;
+}
+
+export interface LinkStrategyDofaItemCommand {
+  dofaItemId: string;
+  contributionPercentage: number;
+}
+
+export interface UpdateStrategyDofaItemLinkCommand {
+  contributionPercentage: number;
+}
+
+export interface LinkStrategyObjectiveCommand {
+  objectiveId: string;
+  description?: string | null;
+}
+
+export interface UpdateStrategyObjectiveLinkCommand {
+  description?: string | null;
+}
+
+// ---------------------------------------------------------------------------
+// Objective Statuses (catalogue)
+// ---------------------------------------------------------------------------
+
+export interface ObjectiveStatusDto {
+  id: string;
+  code: string;
+  name: string;
 }
 
 // ---------------------------------------------------------------------------
@@ -109,6 +158,11 @@ export interface UpdateObjectiveCommand {
   name: string;
   description?: string | null;
   responsibleId?: string | null;
+}
+
+export interface ListObjectivesFilters {
+  status?: string;
+  responsibleId?: string;
 }
 
 // ---------------------------------------------------------------------------
@@ -610,14 +664,39 @@ export async function listStrategyTypes(): Promise<StrategyTypeDto[]> {
 }
 
 // ---------------------------------------------------------------------------
+// Objective Statuses (catalogue)
+// ---------------------------------------------------------------------------
+
+const OBJECTIVE_STATUSES_BASE = "/api/v1/qualitas/strategic/objective-statuses";
+
+export async function listObjectiveStatuses(): Promise<ObjectiveStatusDto[]> {
+  try {
+    const { data } = await api.get<unknown>(OBJECTIVE_STATUSES_BASE);
+    return extractArray<ObjectiveStatusDto>(data);
+  } catch (error: unknown) {
+    if ((error as { __sessionExpired?: boolean })?.__sessionExpired) return [];
+    console.error("Error fetching objective statuses:", error);
+    toast.error(
+      (error as { response?: { data?: { message?: string } } })?.response?.data
+        ?.message || "Error al cargar los estados de objetivos",
+    );
+    return [];
+  }
+}
+
+// ---------------------------------------------------------------------------
 // Strategies
 // ---------------------------------------------------------------------------
 
 const STRATEGIES_BASE = "/api/v1/qualitas/strategic/strategies";
 
-export async function listStrategies(): Promise<StrategyDto[]> {
+export async function listStrategies(
+  filters?: ListStrategiesFilters,
+): Promise<StrategyDto[]> {
   try {
-    const { data } = await api.get<unknown>(STRATEGIES_BASE);
+    const { data } = await api.get<unknown>(STRATEGIES_BASE, {
+      params: filters,
+    });
     return extractArray<StrategyDto>(data);
   } catch (error: unknown) {
     if ((error as { __sessionExpired?: boolean })?.__sessionExpired) return [];
@@ -627,6 +706,23 @@ export async function listStrategies(): Promise<StrategyDto[]> {
         ?.message || "Error al cargar las estrategias",
     );
     return [];
+  }
+}
+
+export async function getStrategyById(
+  strategyId: string,
+): Promise<StrategyDto | null> {
+  try {
+    const { data } = await api.get<StrategyDto>(`${STRATEGIES_BASE}/${strategyId}`);
+    return data ?? null;
+  } catch (error: unknown) {
+    if ((error as { __sessionExpired?: boolean })?.__sessionExpired) return null;
+    console.error("Error fetching strategy:", error);
+    toast.error(
+      (error as { response?: { data?: { message?: string } } })?.response?.data
+        ?.message || "Error al cargar la estrategia",
+    );
+    return null;
   }
 }
 
@@ -701,9 +797,14 @@ export async function listStrategyDofaItems(
 export async function linkDofaItemToStrategy(
   strategyId: string,
   dofaItemId: string,
+  payload?: LinkStrategyDofaItemCommand,
 ): Promise<boolean> {
+  const body: LinkStrategyDofaItemCommand = payload ?? {
+    dofaItemId,
+    contributionPercentage: 100,
+  };
   try {
-    await api.post(`${STRATEGIES_BASE}/${strategyId}/dofa-items/${dofaItemId}`);
+    await api.post(`${STRATEGIES_BASE}/${strategyId}/dofa-items/${dofaItemId}`, body);
     toast.success("Factor DOFA vinculado");
     return true;
   } catch (error: unknown) {
@@ -712,6 +813,26 @@ export async function linkDofaItemToStrategy(
     toast.error(
       (error as { response?: { data?: { message?: string } } })?.response?.data
         ?.message || "Error al vincular el factor DOFA",
+    );
+    return false;
+  }
+}
+
+export async function updateStrategyDofaItemLink(
+  strategyId: string,
+  linkId: string,
+  payload: UpdateStrategyDofaItemLinkCommand,
+): Promise<boolean> {
+  try {
+    await api.put(`${STRATEGIES_BASE}/${strategyId}/dofa-items/${linkId}`, payload);
+    toast.success("Vínculo de factor actualizado");
+    return true;
+  } catch (error: unknown) {
+    if ((error as { __sessionExpired?: boolean })?.__sessionExpired) return false;
+    console.error("Error updating strategy DOFA item link:", error);
+    toast.error(
+      (error as { response?: { data?: { message?: string } } })?.response?.data
+        ?.message || "Error al actualizar el vínculo de factor DOFA",
     );
     return false;
   }
@@ -752,9 +873,14 @@ export async function listStrategyObjectives(strategyId: string): Promise<Object
 export async function linkObjectiveToStrategy(
   strategyId: string,
   objectiveId: string,
+  payload?: LinkStrategyObjectiveCommand,
 ): Promise<boolean> {
+  const body: LinkStrategyObjectiveCommand = payload ?? {
+    objectiveId,
+    description: null,
+  };
   try {
-    await api.post(`${STRATEGIES_BASE}/${strategyId}/objectives/${objectiveId}`);
+    await api.post(`${STRATEGIES_BASE}/${strategyId}/objectives/${objectiveId}`, body);
     toast.success("Objetivo vinculado");
     return true;
   } catch (error: unknown) {
@@ -763,6 +889,26 @@ export async function linkObjectiveToStrategy(
     toast.error(
       (error as { response?: { data?: { message?: string } } })?.response?.data
         ?.message || "Error al vincular el objetivo",
+    );
+    return false;
+  }
+}
+
+export async function updateStrategyObjectiveLink(
+  strategyId: string,
+  linkId: string,
+  payload: UpdateStrategyObjectiveLinkCommand,
+): Promise<boolean> {
+  try {
+    await api.put(`${STRATEGIES_BASE}/${strategyId}/objectives/${linkId}`, payload);
+    toast.success("Vínculo de objetivo actualizado");
+    return true;
+  } catch (error: unknown) {
+    if ((error as { __sessionExpired?: boolean })?.__sessionExpired) return false;
+    console.error("Error updating strategy objective link:", error);
+    toast.error(
+      (error as { response?: { data?: { message?: string } } })?.response?.data
+        ?.message || "Error al actualizar el vínculo de objetivo",
     );
     return false;
   }
@@ -793,9 +939,13 @@ export async function unlinkObjectiveFromStrategy(
 
 const OBJECTIVES_BASE = "/api/v1/qualitas/strategic/objectives";
 
-export async function listObjectives(): Promise<ObjectiveDto[]> {
+export async function listObjectives(
+  filters?: ListObjectivesFilters,
+): Promise<ObjectiveDto[]> {
   try {
-    const { data } = await api.get<unknown>(OBJECTIVES_BASE);
+    const { data } = await api.get<unknown>(OBJECTIVES_BASE, {
+      params: filters,
+    });
     return extractArray<ObjectiveDto>(data);
   } catch (error: unknown) {
     if ((error as { __sessionExpired?: boolean })?.__sessionExpired) return [];

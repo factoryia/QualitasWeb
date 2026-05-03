@@ -15,15 +15,19 @@ import {
   updateBscPerspective,
   deleteBscPerspective,
   listStrategyTypes,
+  listObjectiveStatuses,
   listStrategies,
+  getStrategyById,
   createStrategy,
   updateStrategy,
   deleteStrategy,
   listStrategyDofaItems,
   linkDofaItemToStrategy,
+  updateStrategyDofaItemLink,
   unlinkDofaItemFromStrategy,
   listStrategyObjectives,
   linkObjectiveToStrategy,
+  updateStrategyObjectiveLink,
   unlinkObjectiveFromStrategy,
   listObjectives,
   createObjective,
@@ -51,6 +55,10 @@ import {
   type UpdateBscPerspectiveCommand,
   type CreateStrategyCommand,
   type UpdateStrategyCommand,
+  type LinkStrategyDofaItemCommand,
+  type UpdateStrategyDofaItemLinkCommand,
+  type LinkStrategyObjectiveCommand,
+  type UpdateStrategyObjectiveLinkCommand,
   type CreateObjectiveCommand,
   type UpdateObjectiveCommand,
   type CreateGoalCommand,
@@ -61,7 +69,13 @@ import {
   type UpdateMeasurementCommand,
   type CreateStakeholderDofaLinkCommand,
   type UpdateStakeholderDofaLinkCommand,
+  type ListStrategiesFilters,
+  type ListObjectivesFilters,
 } from "../api/dofa";
+
+// ---------------------------------------------------------------------------
+// Query key factories
+// ---------------------------------------------------------------------------
 
 export const dofaKeys = {
   all: ["strategic", "dofa"] as const,
@@ -82,10 +96,17 @@ export const strategyTypeKeys = {
   list: () => [...strategyTypeKeys.all, "list"] as const,
 };
 
+export const objectiveStatusKeys = {
+  all: ["strategic", "objective-statuses"] as const,
+  list: () => [...objectiveStatusKeys.all, "list"] as const,
+};
+
 export const strategyKeys = {
   all: ["strategic", "strategies"] as const,
   lists: () => [...strategyKeys.all, "list"] as const,
-  list: () => [...strategyKeys.lists()] as const,
+  /** Pass filters to distinguish cached queries per analysisId (or other filter). */
+  list: (filters?: { analysisId?: string }) =>
+    [...strategyKeys.lists(), filters ?? {}] as const,
   details: () => [...strategyKeys.all, "detail"] as const,
   detail: (id: string) => [...strategyKeys.details(), id] as const,
   dofaItems: (strategyId: string) =>
@@ -97,7 +118,8 @@ export const strategyKeys = {
 export const objectiveKeys = {
   all: ["strategic", "objectives"] as const,
   lists: () => [...objectiveKeys.all, "list"] as const,
-  list: () => [...objectiveKeys.lists()] as const,
+  list: (filters?: ListObjectivesFilters) =>
+    [...objectiveKeys.lists(), filters ?? {}] as const,
   details: () => [...objectiveKeys.all, "detail"] as const,
   detail: (id: string) => [...objectiveKeys.details(), id] as const,
 };
@@ -126,6 +148,10 @@ export const stakeholderDofaLinkKeys = {
   lists: () => [...stakeholderDofaLinkKeys.all, "list"] as const,
   list: () => [...stakeholderDofaLinkKeys.lists()] as const,
 };
+
+// ---------------------------------------------------------------------------
+// DOFA Analyses
+// ---------------------------------------------------------------------------
 
 export function useDofaAnalysesQuery() {
   return useQuery({
@@ -285,7 +311,7 @@ export function useBscPerspectiveDeleteMutation() {
 }
 
 // ---------------------------------------------------------------------------
-// Strategy Types
+// Strategy Types (catalogue)
 // ---------------------------------------------------------------------------
 
 export function useStrategyTypesQuery() {
@@ -293,11 +319,53 @@ export function useStrategyTypesQuery() {
 }
 
 // ---------------------------------------------------------------------------
+// Objective Statuses (catalogue)
+// ---------------------------------------------------------------------------
+
+export function useObjectiveStatusesQuery() {
+  return useQuery({
+    queryKey: objectiveStatusKeys.list(),
+    queryFn: listObjectiveStatuses,
+  });
+}
+
+// ---------------------------------------------------------------------------
 // Strategies
 // ---------------------------------------------------------------------------
 
-export function useStrategiesQuery() {
-  return useQuery({ queryKey: strategyKeys.list(), queryFn: listStrategies });
+/**
+ * Fetch strategies, optionally scoped to an analysis.
+ *
+ * NOTE (PM-07): The backend ignores the `?dofaAnalysisId` query param as of
+ * the 2026-04-29 smoke test. We pass it anyway so it works automatically when
+ * Hernán fixes server-side filtering. In the meantime we filter client-side.
+ */
+export function useStrategiesQuery(analysisId?: string) {
+  const filters: ListStrategiesFilters | undefined = analysisId
+    ? { dofaAnalysisId: analysisId }
+    : undefined;
+  return useQuery({
+    queryKey: strategyKeys.list(analysisId ? { analysisId } : undefined),
+    queryFn: async () => {
+      const all = await listStrategies(filters);
+      // PM-07 workaround: filter client-side since backend ignores dofaAnalysisId
+      if (!analysisId) return all;
+      return all.filter((s) => s.dofaAnalysisId === analysisId);
+    },
+  });
+}
+
+export function useStrategyByIdQuery(strategyId?: string) {
+  return useQuery({
+    queryKey: strategyId
+      ? strategyKeys.detail(strategyId)
+      : strategyKeys.detail("__none__"),
+    queryFn: async () => {
+      if (!strategyId) return null;
+      return getStrategyById(strategyId);
+    },
+    enabled: !!strategyId,
+  });
 }
 
 export function useStrategyCreateMutation() {
@@ -320,8 +388,11 @@ export function useStrategyUpdateMutation() {
       strategyId: string;
       payload: UpdateStrategyCommand;
     }) => updateStrategy(strategyId, payload),
-    onSuccess: () => {
+    onSuccess: (_data, variables) => {
       queryClient.invalidateQueries({ queryKey: strategyKeys.all });
+      queryClient.invalidateQueries({
+        queryKey: strategyKeys.detail(variables.strategyId),
+      });
     },
   });
 }
@@ -335,6 +406,10 @@ export function useStrategyDeleteMutation() {
     },
   });
 }
+
+// ---------------------------------------------------------------------------
+// Strategy ↔ DOFA Item links
+// ---------------------------------------------------------------------------
 
 export function useStrategyDofaItemsQuery(strategyId: string) {
   return useQuery({
@@ -350,10 +425,32 @@ export function useLinkDofaItemToStrategyMutation() {
     mutationFn: ({
       strategyId,
       dofaItemId,
+      payload,
     }: {
       strategyId: string;
       dofaItemId: string;
-    }) => linkDofaItemToStrategy(strategyId, dofaItemId),
+      payload?: LinkStrategyDofaItemCommand;
+    }) => linkDofaItemToStrategy(strategyId, dofaItemId, payload),
+    onSuccess: (_data, variables) => {
+      queryClient.invalidateQueries({
+        queryKey: strategyKeys.dofaItems(variables.strategyId),
+      });
+    },
+  });
+}
+
+export function useUpdateStrategyDofaItemLinkMutation() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({
+      strategyId,
+      linkId,
+      payload,
+    }: {
+      strategyId: string;
+      linkId: string;
+      payload: UpdateStrategyDofaItemLinkCommand;
+    }) => updateStrategyDofaItemLink(strategyId, linkId, payload),
     onSuccess: (_data, variables) => {
       queryClient.invalidateQueries({
         queryKey: strategyKeys.dofaItems(variables.strategyId),
@@ -380,6 +477,10 @@ export function useUnlinkDofaItemFromStrategyMutation() {
   });
 }
 
+// ---------------------------------------------------------------------------
+// Strategy ↔ Objective links
+// ---------------------------------------------------------------------------
+
 export function useStrategyObjectivesQuery(strategyId: string) {
   return useQuery({
     queryKey: strategyKeys.objectives(strategyId),
@@ -394,10 +495,33 @@ export function useLinkObjectiveToStrategyMutation() {
     mutationFn: ({
       strategyId,
       objectiveId,
+      payload,
     }: {
       strategyId: string;
       objectiveId: string;
-    }) => linkObjectiveToStrategy(strategyId, objectiveId),
+      payload?: LinkStrategyObjectiveCommand;
+    }) => linkObjectiveToStrategy(strategyId, objectiveId, payload),
+    onSuccess: (_data, variables) => {
+      queryClient.invalidateQueries({
+        queryKey: strategyKeys.objectives(variables.strategyId),
+      });
+      queryClient.invalidateQueries({ queryKey: objectiveKeys.all });
+    },
+  });
+}
+
+export function useUpdateStrategyObjectiveLinkMutation() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({
+      strategyId,
+      linkId,
+      payload,
+    }: {
+      strategyId: string;
+      linkId: string;
+      payload: UpdateStrategyObjectiveLinkCommand;
+    }) => updateStrategyObjectiveLink(strategyId, linkId, payload),
     onSuccess: (_data, variables) => {
       queryClient.invalidateQueries({
         queryKey: strategyKeys.objectives(variables.strategyId),
@@ -428,8 +552,11 @@ export function useUnlinkObjectiveFromStrategyMutation() {
 // Objectives
 // ---------------------------------------------------------------------------
 
-export function useObjectivesQuery() {
-  return useQuery({ queryKey: objectiveKeys.list(), queryFn: listObjectives });
+export function useObjectivesQuery(filters?: ListObjectivesFilters) {
+  return useQuery({
+    queryKey: objectiveKeys.list(filters),
+    queryFn: () => listObjectives(filters),
+  });
 }
 
 export function useObjectiveCreateMutation() {
