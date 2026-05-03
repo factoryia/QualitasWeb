@@ -16,6 +16,10 @@ import {
   deleteBscPerspective,
   listStrategyTypes,
   listObjectiveStatuses,
+  listGoalStatuses,
+  listGoalFrequencies,
+  listGoalTrends,
+  listIndicatorTypes,
   listStrategies,
   getStrategyById,
   createStrategy,
@@ -30,13 +34,17 @@ import {
   updateStrategyObjectiveLink,
   unlinkObjectiveFromStrategy,
   listObjectives,
+  getObjective,
   createObjective,
   updateObjective,
   deleteObjective,
   listGoals,
+  getGoal,
   createGoal,
   updateGoal,
+  deleteGoal,
   listIndicators,
+  getIndicatorDetail,
   createIndicator,
   updateIndicator,
   deleteIndicator,
@@ -70,7 +78,6 @@ import {
   type CreateStakeholderDofaLinkCommand,
   type UpdateStakeholderDofaLinkCommand,
   type ListStrategiesFilters,
-  type ListObjectivesFilters,
 } from "../api/dofa";
 
 // ---------------------------------------------------------------------------
@@ -96,11 +103,6 @@ export const strategyTypeKeys = {
   list: () => [...strategyTypeKeys.all, "list"] as const,
 };
 
-export const objectiveStatusKeys = {
-  all: ["strategic", "objective-statuses"] as const,
-  list: () => [...objectiveStatusKeys.all, "list"] as const,
-};
-
 export const strategyKeys = {
   all: ["strategic", "strategies"] as const,
   lists: () => [...strategyKeys.all, "list"] as const,
@@ -115,38 +117,39 @@ export const strategyKeys = {
     [...strategyKeys.detail(strategyId), "objectives"] as const,
 };
 
-export const objectiveKeys = {
-  all: ["strategic", "objectives"] as const,
-  lists: () => [...objectiveKeys.all, "list"] as const,
-  list: (filters?: ListObjectivesFilters) =>
-    [...objectiveKeys.lists(), filters ?? {}] as const,
-  details: () => [...objectiveKeys.all, "detail"] as const,
-  detail: (id: string) => [...objectiveKeys.details(), id] as const,
-};
-
-export const goalKeys = {
-  all: ["strategic", "goals"] as const,
-  lists: () => [...goalKeys.all, "list"] as const,
-  list: () => [...goalKeys.lists()] as const,
-  details: () => [...goalKeys.all, "detail"] as const,
-  detail: (id: string) => [...goalKeys.details(), id] as const,
-};
-
-export const indicatorKeys = {
-  all: ["strategic", "indicators"] as const,
-  byGoal: (goalId: string) => [...indicatorKeys.all, "goal", goalId] as const,
-};
-
-export const measurementKeys = {
-  all: ["strategic", "measurements"] as const,
-  byIndicator: (indicatorId: string) =>
-    [...measurementKeys.all, "indicator", indicatorId] as const,
-};
-
 export const stakeholderDofaLinkKeys = {
   all: ["strategic", "stakeholder-dofa-links"] as const,
   lists: () => [...stakeholderDofaLinkKeys.all, "list"] as const,
   list: () => [...stakeholderDofaLinkKeys.lists()] as const,
+};
+
+/**
+ * Unified hierarchical key factory for the Plan layer (Sprint 3).
+ * Replaces the old objectiveKeys / goalKeys / indicatorKeys / measurementKeys /
+ * objectiveStatusKeys which are now removed.
+ */
+export const planKeys = {
+  // Objectives
+  objectives: () => ["dofa", "objectives"] as const,
+  objectivesByAnalysis: (analysisId: string) =>
+    ["dofa", "objectives", { analysisId }] as const,
+  objective: (id: string) => ["dofa", "objectives", id] as const,
+  // Goals
+  goals: () => ["dofa", "goals"] as const,
+  goalsByObjective: (objectiveId: string) =>
+    ["dofa", "goals", { objectiveId }] as const,
+  goal: (id: string) => ["dofa", "goals", id] as const,
+  // Indicators (nested under goals)
+  indicators: (goalId: string) =>
+    ["dofa", "goals", goalId, "indicators"] as const,
+  indicatorDetail: (goalId: string, indicatorId: string) =>
+    ["dofa", "goals", goalId, "indicators", indicatorId] as const,
+  // Catalogues
+  objectiveStatuses: () => ["dofa", "objective-statuses"] as const,
+  goalStatuses: () => ["dofa", "goal-statuses"] as const,
+  goalFrequencies: () => ["dofa", "goal-frequencies"] as const,
+  goalTrends: () => ["dofa", "goal-trends"] as const,
+  indicatorTypes: () => ["dofa", "indicator-types"] as const,
 };
 
 // ---------------------------------------------------------------------------
@@ -324,8 +327,9 @@ export function useStrategyTypesQuery() {
 
 export function useObjectiveStatusesQuery() {
   return useQuery({
-    queryKey: objectiveStatusKeys.list(),
+    queryKey: planKeys.objectiveStatuses(),
     queryFn: listObjectiveStatuses,
+    staleTime: Infinity,
   });
 }
 
@@ -505,7 +509,7 @@ export function useLinkObjectiveToStrategyMutation() {
       queryClient.invalidateQueries({
         queryKey: strategyKeys.objectives(variables.strategyId),
       });
-      queryClient.invalidateQueries({ queryKey: objectiveKeys.all });
+      queryClient.invalidateQueries({ queryKey: planKeys.objectives() });
     },
   });
 }
@@ -552,10 +556,34 @@ export function useUnlinkObjectiveFromStrategyMutation() {
 // Objectives
 // ---------------------------------------------------------------------------
 
-export function useObjectivesQuery(filters?: ListObjectivesFilters) {
+/**
+ * Fetch all objectives, optionally filtered by analysisId client-side.
+ * PM-15: backend ignores ?status and ?responsibleId query params.
+ */
+export function useObjectivesQuery(filters?: { analysisId?: string }) {
   return useQuery({
-    queryKey: objectiveKeys.list(filters),
-    queryFn: () => listObjectives(filters),
+    queryKey: filters?.analysisId
+      ? planKeys.objectivesByAnalysis(filters.analysisId)
+      : planKeys.objectives(),
+    queryFn: async () => {
+      const all = await listObjectives();
+      if (!filters?.analysisId) return all;
+      // PM-15 workaround: filter client-side since backend ignores analysisId
+      return all.filter((o) => o.analysisId === filters.analysisId);
+    },
+  });
+}
+
+export function useObjectiveQuery(objectiveId?: string) {
+  return useQuery({
+    queryKey: objectiveId
+      ? planKeys.objective(objectiveId)
+      : planKeys.objective("__none__"),
+    queryFn: async () => {
+      if (!objectiveId) return null;
+      return getObjective(objectiveId);
+    },
+    enabled: !!objectiveId,
   });
 }
 
@@ -564,11 +592,14 @@ export function useObjectiveCreateMutation() {
   return useMutation({
     mutationFn: (payload: CreateObjectiveCommand) => createObjective(payload),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: objectiveKeys.all });
+      queryClient.invalidateQueries({ queryKey: planKeys.objectives() });
       queryClient.invalidateQueries({ queryKey: strategyKeys.all });
     },
   });
 }
+
+/** Alias for Sprint 3+ components */
+export const useCreateObjectiveMutation = useObjectiveCreateMutation;
 
 export function useObjectiveUpdateMutation() {
   const queryClient = useQueryClient();
@@ -580,29 +611,63 @@ export function useObjectiveUpdateMutation() {
       objectiveId: string;
       payload: UpdateObjectiveCommand;
     }) => updateObjective(objectiveId, payload),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: objectiveKeys.all });
+    onSuccess: (_data, variables) => {
+      queryClient.invalidateQueries({ queryKey: planKeys.objectives() });
+      queryClient.invalidateQueries({
+        queryKey: planKeys.objective(variables.objectiveId),
+      });
     },
   });
 }
+
+/** Alias for Sprint 3+ components */
+export const useUpdateObjectiveMutation = useObjectiveUpdateMutation;
 
 export function useObjectiveDeleteMutation() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: (objectiveId: string) => deleteObjective(objectiveId),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: objectiveKeys.all });
+      queryClient.invalidateQueries({ queryKey: planKeys.objectives() });
       queryClient.invalidateQueries({ queryKey: strategyKeys.all });
     },
   });
 }
 
+/** Alias for Sprint 3+ components */
+export const useDeleteObjectiveMutation = useObjectiveDeleteMutation;
+
 // ---------------------------------------------------------------------------
 // Goals
 // ---------------------------------------------------------------------------
 
-export function useGoalsQuery() {
-  return useQuery({ queryKey: goalKeys.list(), queryFn: listGoals });
+/**
+ * Fetch all goals, optionally filtered by objectiveId client-side.
+ * PM-16: backend has no server-side filter for objectiveId.
+ */
+export function useGoalsQuery(filters?: { objectiveId?: string }) {
+  return useQuery({
+    queryKey: filters?.objectiveId
+      ? planKeys.goalsByObjective(filters.objectiveId)
+      : planKeys.goals(),
+    queryFn: async () => {
+      const all = await listGoals();
+      if (!filters?.objectiveId) return all;
+      // PM-16 workaround: filter client-side
+      return all.filter((g) => g.objectiveId === filters.objectiveId);
+    },
+  });
+}
+
+export function useGoalQuery(goalId?: string) {
+  return useQuery({
+    queryKey: goalId ? planKeys.goal(goalId) : planKeys.goal("__none__"),
+    queryFn: async () => {
+      if (!goalId) return null;
+      return getGoal(goalId);
+    },
+    enabled: !!goalId,
+  });
 }
 
 export function useGoalCreateMutation() {
@@ -610,11 +675,14 @@ export function useGoalCreateMutation() {
   return useMutation({
     mutationFn: (payload: CreateGoalCommand) => createGoal(payload),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: goalKeys.all });
-      queryClient.invalidateQueries({ queryKey: objectiveKeys.all });
+      queryClient.invalidateQueries({ queryKey: planKeys.goals() });
+      queryClient.invalidateQueries({ queryKey: planKeys.objectives() });
     },
   });
 }
+
+/** Alias for Sprint 3+ components */
+export const useCreateGoalMutation = useGoalCreateMutation;
 
 export function useGoalUpdateMutation() {
   const queryClient = useQueryClient();
@@ -626,11 +694,29 @@ export function useGoalUpdateMutation() {
       goalId: string;
       payload: UpdateGoalCommand;
     }) => updateGoal(goalId, payload),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: goalKeys.all });
+    onSuccess: (_data, variables) => {
+      queryClient.invalidateQueries({ queryKey: planKeys.goals() });
+      queryClient.invalidateQueries({ queryKey: planKeys.goal(variables.goalId) });
     },
   });
 }
+
+/** Alias for Sprint 3+ components */
+export const useUpdateGoalMutation = useGoalUpdateMutation;
+
+export function useGoalDeleteMutation() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (goalId: string) => deleteGoal(goalId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: planKeys.goals() });
+      queryClient.invalidateQueries({ queryKey: planKeys.objectives() });
+    },
+  });
+}
+
+/** Alias for Sprint 3+ components */
+export const useDeleteGoalMutation = useGoalDeleteMutation;
 
 // ---------------------------------------------------------------------------
 // Indicators
@@ -638,9 +724,25 @@ export function useGoalUpdateMutation() {
 
 export function useIndicatorsQuery(goalId: string) {
   return useQuery({
-    queryKey: indicatorKeys.byGoal(goalId),
+    queryKey: planKeys.indicators(goalId),
     queryFn: () => listIndicators(goalId),
     enabled: !!goalId,
+  });
+}
+
+/**
+ * Single indicator WITH nested measurements (PM-14: only way to read measurements).
+ * Use `options.enabled = false` for lazy load.
+ */
+export function useIndicatorDetailQuery(
+  goalId: string,
+  indicatorId: string,
+  options?: { enabled?: boolean },
+) {
+  return useQuery({
+    queryKey: planKeys.indicatorDetail(goalId, indicatorId),
+    queryFn: () => getIndicatorDetail(goalId, indicatorId),
+    enabled: options?.enabled !== undefined ? options.enabled : !!goalId && !!indicatorId,
   });
 }
 
@@ -656,11 +758,14 @@ export function useIndicatorCreateMutation() {
     }) => createIndicator(goalId, payload),
     onSuccess: (_data, variables) => {
       queryClient.invalidateQueries({
-        queryKey: indicatorKeys.byGoal(variables.goalId),
+        queryKey: planKeys.indicators(variables.goalId),
       });
     },
   });
 }
+
+/** Alias for Sprint 3+ components */
+export const useCreateIndicatorMutation = useIndicatorCreateMutation;
 
 export function useIndicatorUpdateMutation() {
   const queryClient = useQueryClient();
@@ -676,11 +781,17 @@ export function useIndicatorUpdateMutation() {
     }) => updateIndicator(goalId, indicatorId, payload),
     onSuccess: (_data, variables) => {
       queryClient.invalidateQueries({
-        queryKey: indicatorKeys.byGoal(variables.goalId),
+        queryKey: planKeys.indicators(variables.goalId),
+      });
+      queryClient.invalidateQueries({
+        queryKey: planKeys.indicatorDetail(variables.goalId, variables.indicatorId),
       });
     },
   });
 }
+
+/** Alias for Sprint 3+ components */
+export const useUpdateIndicatorMutation = useIndicatorUpdateMutation;
 
 export function useIndicatorDeleteMutation() {
   const queryClient = useQueryClient();
@@ -689,14 +800,18 @@ export function useIndicatorDeleteMutation() {
       deleteIndicator(goalId, indicatorId),
     onSuccess: (_data, variables) => {
       queryClient.invalidateQueries({
-        queryKey: indicatorKeys.byGoal(variables.goalId),
+        queryKey: planKeys.indicators(variables.goalId),
       });
     },
   });
 }
 
+/** Alias for Sprint 3+ components */
+export const useDeleteIndicatorMutation = useIndicatorDeleteMutation;
+
 // ---------------------------------------------------------------------------
-// Measurements (no GET list — backend gap)
+// Measurements (no GET list — backend gap PM-14)
+// Mutations must invalidate planKeys.indicatorDetail to refresh nested measurements.
 // ---------------------------------------------------------------------------
 
 export function useMeasurementCreateMutation() {
@@ -707,15 +822,20 @@ export function useMeasurementCreateMutation() {
       payload,
     }: {
       indicatorId: string;
+      goalId: string;
       payload: CreateMeasurementCommand;
     }) => createMeasurement(indicatorId, payload),
     onSuccess: (_data, variables) => {
+      // Invalidate the indicator detail so measurements array is refreshed
       queryClient.invalidateQueries({
-        queryKey: measurementKeys.byIndicator(variables.indicatorId),
+        queryKey: planKeys.indicatorDetail(variables.goalId, variables.indicatorId),
       });
     },
   });
 }
+
+/** Alias for Sprint 3+ components */
+export const useCreateMeasurementMutation = useMeasurementCreateMutation;
 
 export function useMeasurementUpdateMutation() {
   const queryClient = useQueryClient();
@@ -726,16 +846,20 @@ export function useMeasurementUpdateMutation() {
       payload,
     }: {
       indicatorId: string;
+      goalId: string;
       measurementId: string;
       payload: UpdateMeasurementCommand;
     }) => updateMeasurement(indicatorId, measurementId, payload),
     onSuccess: (_data, variables) => {
       queryClient.invalidateQueries({
-        queryKey: measurementKeys.byIndicator(variables.indicatorId),
+        queryKey: planKeys.indicatorDetail(variables.goalId, variables.indicatorId),
       });
     },
   });
 }
+
+/** Alias for Sprint 3+ components */
+export const useUpdateMeasurementMutation = useMeasurementUpdateMutation;
 
 export function useMeasurementDeleteMutation() {
   const queryClient = useQueryClient();
@@ -745,13 +869,53 @@ export function useMeasurementDeleteMutation() {
       measurementId,
     }: {
       indicatorId: string;
+      goalId: string;
       measurementId: string;
     }) => deleteMeasurement(indicatorId, measurementId),
     onSuccess: (_data, variables) => {
       queryClient.invalidateQueries({
-        queryKey: measurementKeys.byIndicator(variables.indicatorId),
+        queryKey: planKeys.indicatorDetail(variables.goalId, variables.indicatorId),
       });
     },
+  });
+}
+
+/** Alias for Sprint 3+ components */
+export const useDeleteMeasurementMutation = useMeasurementDeleteMutation;
+
+// ---------------------------------------------------------------------------
+// Catalogues (staleTime: Infinity — these change only after backend seed updates)
+// ---------------------------------------------------------------------------
+
+export function useGoalStatusesQuery() {
+  return useQuery({
+    queryKey: planKeys.goalStatuses(),
+    queryFn: listGoalStatuses,
+    staleTime: Infinity,
+  });
+}
+
+export function useGoalFrequenciesQuery() {
+  return useQuery({
+    queryKey: planKeys.goalFrequencies(),
+    queryFn: listGoalFrequencies,
+    staleTime: Infinity,
+  });
+}
+
+export function useGoalTrendsQuery() {
+  return useQuery({
+    queryKey: planKeys.goalTrends(),
+    queryFn: listGoalTrends,
+    staleTime: Infinity,
+  });
+}
+
+export function useIndicatorTypesQuery() {
+  return useQuery({
+    queryKey: planKeys.indicatorTypes(),
+    queryFn: listIndicatorTypes,
+    staleTime: Infinity,
   });
 }
 

@@ -118,14 +118,40 @@ export interface UpdateStrategyObjectiveLinkCommand {
 }
 
 // ---------------------------------------------------------------------------
+// Catalogue types (shared shape for all status/frequency/type catalogues)
+// ---------------------------------------------------------------------------
+
+export interface CatalogStatusDto {
+  id: string;
+  code: string;
+  name: string;
+  colorHex?: string;
+  displayOrder?: number;
+  isActive: boolean;
+}
+
+export interface IndicatorTypeDto extends CatalogStatusDto {
+  description?: string;
+}
+
+export interface GoalTrendDto extends CatalogStatusDto {
+  /** Unicode symbol: ↑ → ↓ */
+  symbol: string;
+}
+
+// ---------------------------------------------------------------------------
 // Objective Statuses (catalogue)
 // ---------------------------------------------------------------------------
 
+/** @deprecated Use CatalogStatusDto — kept for backwards-compat with Sprint 2 */
 export interface ObjectiveStatusDto {
   id: string;
   code: string;
   name: string;
 }
+
+/** Goal statuses catalogue (same dual-seed issue as objective-statuses — PM-13) */
+export type GoalStatusDto = CatalogStatusDto;
 
 // ---------------------------------------------------------------------------
 // Objectives
@@ -134,30 +160,45 @@ export interface ObjectiveStatusDto {
 export interface ObjectiveDto {
   id: string;
   name: string;
-  description?: string | null;
-  analysisId?: string | null;
+  description: string | null;
+  analysisId: string | null;
   statusId: string;
   startDate: string;
   endDate: string;
   progressPercentage: number;
-  responsibleId?: string | null;
+  responsibleId: string | null;
+  createdOnUtc: string;
+  createdBy: string | null;
+  lastModifiedOnUtc: string | null;
+  lastModifiedBy: string | null;
 }
 
 export interface CreateObjectiveCommand {
   name: string;
-  description?: string | null;
+  description: string | null;
   statusId: string;
   startDate: string;
   endDate: string;
-  responsibleId?: string | null;
-  strategyId?: string | null;
+  responsibleId: string | null;
+  /** Optional link to a DOFA analysis (PM-15: client-side filter by analysisId) */
+  analysisId: string | null;
+}
+
+/** Alias used by Sprint 3+ components */
+export type CreateObjectivePayload = CreateObjectiveCommand;
+
+export interface UpdateObjectivePayload {
+  id: string;
+  name: string;
+  description: string | null;
+  responsibleId: string | null;
 }
 
 export interface UpdateObjectiveCommand {
   id: string;
   name: string;
-  description?: string | null;
-  responsibleId?: string | null;
+  description: string | null;
+  responsibleId: string | null;
 }
 
 export interface ListObjectivesFilters {
@@ -176,13 +217,18 @@ export interface GoalDto {
   targetValue: number;
   currentValue: number;
   baselineValue: number;
-  unit?: string | null;
+  unit: string | null;
   weight: number;
   deadline: string;
   statusId: string;
-  responsibleId?: string | null;
+  responsibleId: string | null;
   progressPercentage: number;
+  createdOnUtc: string;
+  createdBy: string | null;
 }
+
+/** Alias used by Sprint 3+ components */
+export type CreateGoalPayload = CreateGoalCommand;
 
 export interface CreateGoalCommand {
   description: string;
@@ -190,11 +236,11 @@ export interface CreateGoalCommand {
   targetValue: number;
   currentValue: number;
   baselineValue: number;
-  unit?: string | null;
+  unit: string | null;
   weight: number;
   deadline: string;
   statusId: string;
-  responsibleId?: string | null;
+  responsibleId: string | null;
 }
 
 export interface UpdateGoalCommand {
@@ -203,77 +249,95 @@ export interface UpdateGoalCommand {
   targetValue: number;
   currentValue: number;
   baselineValue: number;
-  unit?: string | null;
+  unit: string | null;
   weight: number;
   deadline: string;
   statusId: string;
-  responsibleId?: string | null;
+  responsibleId: string | null;
 }
 
 // ---------------------------------------------------------------------------
 // Indicators (GoalIndicators)
 // ---------------------------------------------------------------------------
 
-/** Derived from CreateGoalIndicatorRequest shape — backend GET schema not in spec */
 export interface IndicatorDto {
   id: string;
   name: string;
   goalId: string;
-  formula?: string | null;
+  formula: string | null;
   frequencyId: string;
-  trendId?: string | null;
+  trendId: string | null;
   indicatorTypeId: string;
-  dataSource?: string | null;
-  responsibleId?: string | null;
+  dataSource: string | null;
+  responsibleId: string | null;
+  /** null in LIST responses; populated array in single GET (PM-14) */
+  measurements: MeasurementDto[] | null;
+  createdOnUtc: string;
+  createdBy: string | null;
+  lastModifiedOnUtc: string | null;
+  lastModifiedBy: string | null;
 }
 
 export interface CreateIndicatorCommand {
   name: string;
-  goalId: string;
-  formula?: string | null;
+  /** NOTE: do NOT include goalId here — it comes from the path param */
   frequencyId: string;
-  trendId?: string | null;
   indicatorTypeId: string;
-  dataSource?: string | null;
-  responsibleId?: string | null;
+  trendId: string | null;
+  formula: string | null;
+  dataSource: string | null;
+  responsibleId: string | null;
 }
+
+/** Alias used by Sprint 3+ components */
+export type CreateIndicatorPayload = CreateIndicatorCommand;
 
 export interface UpdateIndicatorCommand {
   name: string;
-  formula?: string | null;
+  formula: string | null;
   frequencyId: string;
-  trendId?: string | null;
+  trendId: string | null;
   indicatorTypeId: string;
-  dataSource?: string | null;
-  responsibleId?: string | null;
+  dataSource: string | null;
+  responsibleId: string | null;
 }
 
 // ---------------------------------------------------------------------------
 // Measurements
 // ---------------------------------------------------------------------------
 
-/** Backend has no GET list endpoint for measurements — create/update/delete only */
+/** Backend has no GET list endpoint for measurements (PM-14). Read via getIndicatorDetail. */
 export interface MeasurementDto {
   id: string;
   goalIndicatorId: string;
   measurementDate: string;
   value: number;
-  observations?: string | null;
-  evidenceUrl?: string | null;
+  observations: string | null;
+  evidenceUrl: string | null;
+  /** FK to user who recorded the measurement (PM-20: verify backend assigns from JWT) */
+  measuredBy: string | null;
+  createdOnUtc: string;
+  createdBy: string | null;
+  lastModifiedOnUtc: string | null;
+  lastModifiedBy: string | null;
 }
 
 export interface CreateMeasurementCommand {
-  goalIndicatorId: string;
-  measurementDate: string;
   value: number;
-  observations?: string | null;
-  evidenceUrl?: string | null;
+  measurementDate: string;
+  /** PM-19: redundant with path param indicatorId but required by backend */
+  goalIndicatorId: string;
+  observations: string | null;
+  evidenceUrl: string | null;
 }
+
+/** Alias used by Sprint 3+ components */
+export type CreateMeasurementPayload = CreateMeasurementCommand;
 
 export interface UpdateMeasurementCommand {
   value: number;
-  observations?: string | null;
-  evidenceUrl?: string | null;
+  observations: string | null;
+  evidenceUrl: string | null;
 }
 
 // ---------------------------------------------------------------------------
@@ -684,6 +748,75 @@ export async function listObjectiveStatuses(): Promise<ObjectiveStatusDto[]> {
   }
 }
 
+const GOAL_STATUSES_BASE = "/api/v1/qualitas/strategic/goal-statuses";
+
+/** PM-13: returns 9 values with dual seed — prefer PascalCase codes (Defined/InProgress/…) */
+export async function listGoalStatuses(): Promise<GoalStatusDto[]> {
+  try {
+    const { data } = await api.get<unknown>(GOAL_STATUSES_BASE);
+    return extractArray<GoalStatusDto>(data);
+  } catch (error: unknown) {
+    if ((error as { __sessionExpired?: boolean })?.__sessionExpired) return [];
+    console.error("Error fetching goal statuses:", error);
+    toast.error(
+      (error as { response?: { data?: { message?: string } } })?.response?.data
+        ?.message || "Error al cargar los estados de metas",
+    );
+    return [];
+  }
+}
+
+const GOAL_FREQUENCIES_BASE = "/api/v1/qualitas/strategic/goal-frequencies";
+
+export async function listGoalFrequencies(): Promise<CatalogStatusDto[]> {
+  try {
+    const { data } = await api.get<unknown>(GOAL_FREQUENCIES_BASE);
+    return extractArray<CatalogStatusDto>(data);
+  } catch (error: unknown) {
+    if ((error as { __sessionExpired?: boolean })?.__sessionExpired) return [];
+    console.error("Error fetching goal frequencies:", error);
+    toast.error(
+      (error as { response?: { data?: { message?: string } } })?.response?.data
+        ?.message || "Error al cargar las frecuencias",
+    );
+    return [];
+  }
+}
+
+const GOAL_TRENDS_BASE = "/api/v1/qualitas/strategic/goal-trends";
+
+export async function listGoalTrends(): Promise<GoalTrendDto[]> {
+  try {
+    const { data } = await api.get<unknown>(GOAL_TRENDS_BASE);
+    return extractArray<GoalTrendDto>(data);
+  } catch (error: unknown) {
+    if ((error as { __sessionExpired?: boolean })?.__sessionExpired) return [];
+    console.error("Error fetching goal trends:", error);
+    toast.error(
+      (error as { response?: { data?: { message?: string } } })?.response?.data
+        ?.message || "Error al cargar las tendencias",
+    );
+    return [];
+  }
+}
+
+const INDICATOR_TYPES_BASE = "/api/v1/qualitas/strategic/indicator-types";
+
+export async function listIndicatorTypes(): Promise<IndicatorTypeDto[]> {
+  try {
+    const { data } = await api.get<unknown>(INDICATOR_TYPES_BASE);
+    return extractArray<IndicatorTypeDto>(data);
+  } catch (error: unknown) {
+    if ((error as { __sessionExpired?: boolean })?.__sessionExpired) return [];
+    console.error("Error fetching indicator types:", error);
+    toast.error(
+      (error as { response?: { data?: { message?: string } } })?.response?.data
+        ?.message || "Error al cargar los tipos de indicador",
+    );
+    return [];
+  }
+}
+
 // ---------------------------------------------------------------------------
 // Strategies
 // ---------------------------------------------------------------------------
@@ -1011,6 +1144,21 @@ export async function deleteObjective(objectiveId: string): Promise<boolean> {
   }
 }
 
+export async function getObjective(objectiveId: string): Promise<ObjectiveDto | null> {
+  try {
+    const { data } = await api.get<ObjectiveDto>(`${OBJECTIVES_BASE}/${objectiveId}`);
+    return data ?? null;
+  } catch (error: unknown) {
+    if ((error as { __sessionExpired?: boolean })?.__sessionExpired) return null;
+    console.error("Error fetching objective:", error);
+    toast.error(
+      (error as { response?: { data?: { message?: string } } })?.response?.data
+        ?.message || "Error al cargar el objetivo",
+    );
+    return null;
+  }
+}
+
 // ---------------------------------------------------------------------------
 // Goals
 // ---------------------------------------------------------------------------
@@ -1067,6 +1215,37 @@ export async function updateGoal(
   }
 }
 
+export async function getGoal(goalId: string): Promise<GoalDto | null> {
+  try {
+    const { data } = await api.get<GoalDto>(`${GOALS_BASE}/${goalId}`);
+    return data ?? null;
+  } catch (error: unknown) {
+    if ((error as { __sessionExpired?: boolean })?.__sessionExpired) return null;
+    console.error("Error fetching goal:", error);
+    toast.error(
+      (error as { response?: { data?: { message?: string } } })?.response?.data
+        ?.message || "Error al cargar la meta",
+    );
+    return null;
+  }
+}
+
+export async function deleteGoal(goalId: string): Promise<boolean> {
+  try {
+    await api.delete(`${GOALS_BASE}/${goalId}`);
+    toast.success("Meta eliminada");
+    return true;
+  } catch (error: unknown) {
+    if ((error as { __sessionExpired?: boolean })?.__sessionExpired) return false;
+    console.error("Error deleting goal:", error);
+    toast.error(
+      (error as { response?: { data?: { message?: string } } })?.response?.data
+        ?.message || "Error al eliminar la meta",
+    );
+    return false;
+  }
+}
+
 // ---------------------------------------------------------------------------
 // Indicators
 // ---------------------------------------------------------------------------
@@ -1088,14 +1267,40 @@ export async function listIndicators(goalId: string): Promise<IndicatorDto[]> {
   }
 }
 
+export async function getIndicatorDetail(
+  goalId: string,
+  indicatorId: string,
+): Promise<IndicatorDto | null> {
+  try {
+    const { data } = await api.get<IndicatorDto>(
+      `${GOALS_BASE}/${goalId}/indicators/${indicatorId}`,
+    );
+    return data ?? null;
+  } catch (error: unknown) {
+    if ((error as { __sessionExpired?: boolean })?.__sessionExpired) return null;
+    console.error("Error fetching indicator detail:", error);
+    toast.error(
+      (error as { response?: { data?: { message?: string } } })?.response?.data
+        ?.message || "Error al cargar el indicador",
+    );
+    return null;
+  }
+}
+
 export async function createIndicator(
   goalId: string,
   payload: CreateIndicatorCommand,
 ): Promise<IndicatorDto | null> {
   try {
-    const { data } = await api.post<IndicatorDto>(
+    // PM-17: POST returns UUID raw string, not an object
+    const { data: rawId } = await api.post<string>(
       `${GOALS_BASE}/${goalId}/indicators`,
       payload,
+    );
+    const newId = String(rawId).replace(/^"|"$/g, "");
+    // Fetch the full object (single GET includes measurements: [])
+    const { data } = await api.get<IndicatorDto>(
+      `${GOALS_BASE}/${goalId}/indicators/${newId}`,
     );
     toast.success("Indicador creado");
     return data ?? null;
@@ -1158,14 +1363,16 @@ const INDICATORS_BASE = "/api/v1/qualitas/strategic/indicators";
 export async function createMeasurement(
   indicatorId: string,
   payload: CreateMeasurementCommand,
-): Promise<MeasurementDto | null> {
+): Promise<string | null> {
   try {
-    const { data } = await api.post<MeasurementDto>(
+    // PM-17: POST returns UUID raw string, not a MeasurementDto
+    const { data: rawId } = await api.post<string>(
       `${INDICATORS_BASE}/${indicatorId}/measurements`,
       payload,
     );
+    const newId = String(rawId).replace(/^"|"$/g, "");
     toast.success("Medición registrada");
-    return data ?? null;
+    return newId;
   } catch (error: unknown) {
     if ((error as { __sessionExpired?: boolean })?.__sessionExpired) return null;
     console.error("Error creating measurement:", error);
