@@ -124,3 +124,34 @@
     @apply bg-background text-foreground;
   }
 }
+
+/* Auth: animated gradient blobs (GradientBubbles) */
+@keyframes auth-float {
+  0%,
+  100% {
+    transform: translate(0, 0) scale(1);
+  }
+  50% {
+    transform: translate(12px, -18px) scale(1.05);
+  }
+}
+
+@keyframes auth-float-reverse {
+  0%,
+  100% {
+    transform: translate(0, 0) scale(1);
+  }
+  50% {
+    transform: translate(-14px, 14px) scale(1.04);
+  }
+}
+
+@keyframes auth-float-slow {
+  0%,
+  100% {
+    transform: translate(0, 0) scale(1);
+  }
+  50% {
+    transform: translate(-10px, -12px) scale(1.03);
+  }
+}

@@ -1,10 +1,9 @@
 import { api } from "@/lib/axios";
-import type { ProcessDto } from "../types";
+import type { ProcessDto, CreateProcessRequest, UpdateProcessRequest } from "../types";
 
 const BASE = "/api/v1/qualitas/operations/processes";
 
 export const processesApi = {
-  /** Lista todos los procesos (para el Mapa de Procesos). Agrupar en front por processType. */
   list: async (includeInactive = false): Promise<ProcessDto[]> => {
     const { data } = await api.get<ProcessDto[]>(BASE, {
       params: { includeInactive },
@@ -12,7 +11,6 @@ export const processesApi = {
     return Array.isArray(data) ? data : [];
   },
 
-  /** Obtiene un proceso por ID */
   getById: async (id: string): Promise<ProcessDto | null> => {
     try {
       const { data } = await api.get<ProcessDto>(`${BASE}/${id}`);
@@ -20,5 +18,22 @@ export const processesApi = {
     } catch {
       return null;
     }
+  },
+
+  create: async (payload: CreateProcessRequest): Promise<ProcessDto> => {
+    const { data } = await api.post<ProcessDto>(BASE, payload);
+    return data;
+  },
+
+  update: async (id: string, payload: UpdateProcessRequest): Promise<void> => {
+    await api.put(`${BASE}/${id}`, payload);
+  },
+
+  delete: async (id: string): Promise<void> => {
+    await api.delete(`${BASE}/${id}`);
+  },
+
+  restore: async (id: string): Promise<void> => {
+    await api.post(`${BASE}/${id}/restore`, {});
   },
 };

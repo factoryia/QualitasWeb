@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { Eye, EyeOff, Loader2 } from "lucide-react";
+import { Building2, Eye, EyeOff, Loader2, Lock, Mail } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -116,7 +116,17 @@ export function LoginForm({ tenant }: LoginFormProps) {
                 <FormItem>
                   <FormLabel>Tenant (Organización)</FormLabel>
                   <FormControl>
-                    <Input placeholder="mi-organizacion" {...field} />
+                    <div className="relative">
+                      <Building2
+                        className="pointer-events-none absolute left-3 top-1/2 size-[18px] -translate-y-1/2 text-slate-400"
+                        aria-hidden
+                      />
+                      <Input
+                        placeholder="mi-organizacion"
+                        className="h-11 border-slate-200/90 bg-sky-50/35 pl-10 transition-colors focus-visible:bg-white"
+                        {...field}
+                      />
+                    </div>
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -130,7 +140,19 @@ export function LoginForm({ tenant }: LoginFormProps) {
               <FormItem>
                 <FormLabel>Correo Electrónico</FormLabel>
                 <FormControl>
-                  <Input placeholder="m@ejemplo.com" {...field} />
+                  <div className="relative">
+                    <Mail
+                      className="pointer-events-none absolute left-3 top-1/2 size-[18px] -translate-y-1/2 text-slate-400"
+                      aria-hidden
+                    />
+                    <Input
+                      placeholder="m@ejemplo.com"
+                      type="email"
+                      autoComplete="email"
+                      className="h-11 border-slate-200/90 bg-sky-50/35 pl-10 transition-colors focus-visible:bg-white"
+                      {...field}
+                    />
+                  </div>
                 </FormControl>
                 <FormMessage />
               </FormItem>
@@ -144,23 +166,29 @@ export function LoginForm({ tenant }: LoginFormProps) {
                 <FormLabel>Contraseña</FormLabel>
                 <FormControl>
                   <div className="relative">
+                    <Lock
+                      className="pointer-events-none absolute left-3 top-1/2 size-[18px] -translate-y-1/2 text-slate-400"
+                      aria-hidden
+                    />
                     <Input
                       type={showPassword ? "text" : "password"}
-                      className="pr-10"
+                      placeholder="Tu contraseña"
+                      autoComplete="********"
+                      className="h-11 border-slate-200/90 bg-sky-50/35 pl-10 pr-12 transition-colors focus-visible:bg-white"
                       {...field}
                     />
                     <button
                       type="button"
-                      className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground/60 hover:text-foreground transition-colors"
+                      className="absolute right-1.5 top-1/2 flex size-9 -translate-y-1/2 items-center justify-center rounded-lg text-slate-500 transition-colors hover:bg-slate-100/90 hover:text-slate-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/40"
                       aria-label={
                         showPassword ? "Ocultar contraseña" : "Mostrar contraseña"
                       }
                       onClick={() => setShowPassword((v) => !v)}
                     >
                       {showPassword ? (
-                        <EyeOff className="h-4 w-4" />
+                        <EyeOff className="size-[18px]" strokeWidth={2} />
                       ) : (
-                        <Eye className="h-4 w-4" />
+                        <Eye className="size-[18px]" strokeWidth={2} />
                       )}
                     </button>
                   </div>
@@ -176,11 +204,13 @@ export function LoginForm({ tenant }: LoginFormProps) {
           )}
           <Button
             size="lg"
-            className="w-full bg-linear-to-b from-[#5490f1] to-[#0757d8] hover:to-[#276cdb] transition-colors duration-300 text-white"
+            className="h-12 w-full rounded-xl bg-linear-to-b from-[#5490f1] to-[#0757d8] font-semibold text-white shadow-md shadow-blue-500/25 transition-colors duration-300 hover:to-[#276cdb]"
             type="submit"
             disabled={isLoading}
           >
-            {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+            {isLoading && (
+              <Loader2 className="mr-2 size-[18px] animate-spin" aria-hidden />
+            )}
             Iniciar Sesión
           </Button>
         </form>

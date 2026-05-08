@@ -11,6 +11,7 @@ import {
   Users,
   FileText,
   Zap,
+  Settings,
 } from "lucide-react";
 import { NavMain } from "@/components/shared/nav-main";
 import type { NavMainItem } from "@/components/shared/nav-main";
@@ -82,8 +83,23 @@ const epcNavMainData: NavMainItem[] = [
 export function AppSidebar(props: React.ComponentProps<typeof Sidebar>) {
   const pathname = usePathname();
   const tenant = useAuthStore((s) => s.user?.tenant);
+  const role = useAuthStore((s) => s.user?.role);
+  const isAdmin = role === "Admin" || role === "admin" || role === "Administrator";
 
-  const filteredNav = tenant === "epc" ? epcNavMainData : navMainData;
+  const baseNav = tenant === "epc" ? epcNavMainData : navMainData;
+  const filteredNav: NavMainItem[] = isAdmin
+    ? [
+        ...baseNav,
+        {
+          title: "Configuración",
+          url: "/configuracion/tipos-proceso",
+          icon: Settings,
+          items: [
+            { title: "Tipos de Proceso", url: "/configuracion/tipos-proceso" },
+          ],
+        },
+      ]
+    : baseNav;
   const homeHref = tenant === "epc" ? "/usuarios" : "/";
 
   // Marcar como isActive la sección que contiene la ruta actual
