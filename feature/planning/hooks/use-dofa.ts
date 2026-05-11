@@ -569,13 +569,8 @@ export function useObjectivesQuery(filters?: { analysisId?: string }) {
       const all = await listObjectives();
       if (!filters?.analysisId) return all;
       // PM-15 workaround: filter client-side since backend ignores analysisId
-      // WORKAROUND PM-21: backend descarta analysisId en POST /objectives.
-      // Mientras Hernán arregla el backend, también mostramos los huérfanos
-      // (analysisId === null). Restaurar a `o.analysisId === analysisId` cuando
-      // el backend procese correctamente el campo.
-      return all.filter(
-        (o) => o.analysisId === filters.analysisId || o.analysisId === null,
-      );
+      // PM-21 resolved: backend now sets analysisId correctly; orphan (null) objectives excluded.
+      return all.filter((o) => o.analysisId === filters.analysisId);
     },
   });
 }
