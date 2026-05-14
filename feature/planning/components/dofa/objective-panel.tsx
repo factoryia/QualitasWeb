@@ -9,6 +9,8 @@ import { ProgressRing } from "./progress-ring";
 import { OBJECTIVE_STATUS_CFG } from "./plan-helpers";
 import { TabObjectiveDescription } from "./tab-objective-description";
 import { TabObjectiveGoals } from "./tab-objective-goals";
+import { TabObjectiveIndicators } from "./tab-objective-indicators";
+import { TabObjectiveMeasurements } from "./tab-objective-measurements";
 
 interface ObjectivePanelProps {
   objectiveId: string | null;
@@ -57,8 +59,8 @@ export function ObjectivePanel({ objectiveId, onClose, readOnly }: ObjectivePane
             <TabsList className="grid w-full grid-cols-4">
               <TabsTrigger value="description">Descripción</TabsTrigger>
               <TabsTrigger value="goals">Metas</TabsTrigger>
-              <TabsTrigger value="indicators" disabled>Indicadores</TabsTrigger>
-              <TabsTrigger value="measurements" disabled>Mediciones</TabsTrigger>
+              <TabsTrigger value="indicators">Indicadores</TabsTrigger>
+              <TabsTrigger value="measurements">Mediciones</TabsTrigger>
             </TabsList>
             <TabsContent value="description" className="mt-4">
               {objective ? (
@@ -77,6 +79,12 @@ export function ObjectivePanel({ objectiveId, onClose, readOnly }: ObjectivePane
             </TabsContent>
             <TabsContent value="goals" className="mt-4">
               <TabObjectiveGoals objectiveId={objectiveId} readOnly={readOnly} />
+            </TabsContent>
+            <TabsContent value="indicators" className="mt-4">
+              <TabObjectiveIndicators objectiveId={objectiveId} readOnly={readOnly} />
+            </TabsContent>
+            <TabsContent value="measurements" className="mt-4">
+              <TabObjectiveMeasurements objectiveId={objectiveId} />
             </TabsContent>
           </Tabs>
         )}
