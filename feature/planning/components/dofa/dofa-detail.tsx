@@ -16,6 +16,7 @@ import {
 import { DofaDiagnostico } from "./dofa-diagnostico";
 import { DofaSettingsSheet } from "./dofa-settings-sheet";
 import { EstrategiaList } from "./estrategia-list";
+import { ObjectivePanel } from "./objective-panel";
 import { PlanGrid } from "./plan-grid";
 import { StrategyPanel } from "./strategy-panel";
 import { mapStrategicTypeIdToCode, STRATEGY_CODES } from "./strategy-types-helpers";
@@ -357,8 +358,11 @@ export function DofaDetail({ analysisId, onBack }: Props) {
               readOnly={isReadOnly}
               onSelectObjective={setSelectedObjectiveId}
             />
-            {/* Sprint 3.3: wire ObjectivePanel when selectedObjectiveId is set */}
-            {selectedObjectiveId && null}
+            <ObjectivePanel
+              objectiveId={selectedObjectiveId}
+              onClose={() => setSelectedObjectiveId(null)}
+              readOnly={isReadOnly}
+            />
           </>
         )}
       </div>

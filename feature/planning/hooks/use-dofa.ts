@@ -698,6 +698,8 @@ export function useGoalUpdateMutation() {
     onSuccess: (_data, variables) => {
       queryClient.invalidateQueries({ queryKey: planKeys.goals() });
       queryClient.invalidateQueries({ queryKey: planKeys.goal(variables.goalId) });
+      // Invalidate objectives so progressPercentage refreshes in ObjectivePanel
+      queryClient.invalidateQueries({ queryKey: planKeys.objectives() });
     },
   });
 }
