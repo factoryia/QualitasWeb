@@ -38,6 +38,8 @@ export function ObjectivePanel({ objectiveId, onClose, readOnly }: ObjectivePane
   return (
     <Sheet open={isOpen} onOpenChange={(o) => !o && onClose()}>
       <SheetContent className="sm:max-w-3xl overflow-y-auto">
+        {/* sr-only title keeps Radix aria-labelledby valid when the visual header is custom */}
+        <SheetTitle className="sr-only">{objective?.name ?? "Objetivo estratégico"}</SheetTitle>
         <SheetHeader className="pb-0">
           <div className="flex items-start gap-3 pb-4 border-b border-border">
             <ProgressRing value={objective?.progressPercentage ?? 0} size={56} />
