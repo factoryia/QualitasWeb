@@ -16,6 +16,8 @@ import {
 import { DofaDiagnostico } from "./dofa-diagnostico";
 import { DofaSettingsSheet } from "./dofa-settings-sheet";
 import { EstrategiaList } from "./estrategia-list";
+import { ObjectivePanel } from "./objective-panel";
+import { PlanGrid } from "./plan-grid";
 import { StrategyPanel } from "./strategy-panel";
 import { mapStrategicTypeIdToCode, STRATEGY_CODES } from "./strategy-types-helpers";
 
@@ -167,6 +169,8 @@ export function DofaDetail({ analysisId, onBack }: Props) {
   const [activePhase, setActivePhase] = useState<Phase>(1);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [selectedStrategyId, setSelectedStrategyId] = useState<string | null>(null);
+  // Sprint 3.3: selectedObjectiveId will drive <ObjectivePanel>
+  const [selectedObjectiveId, setSelectedObjectiveId] = useState<string | null>(null);
 
   const { data: strategies } = useStrategiesQuery(analysisId);
   const { data: strategyTypes } = useStrategyTypesQuery();
@@ -348,9 +352,18 @@ export function DofaDetail({ analysisId, onBack }: Props) {
           </>
         )}
         {activePhase === 3 && (
-          <div className="p-10 text-center text-sm text-muted-foreground">
-            Fase 3 — Plan de objetivos (próximamente en Sprint 3)
-          </div>
+          <>
+            <PlanGrid
+              analysisId={analysisId}
+              readOnly={isReadOnly}
+              onSelectObjective={setSelectedObjectiveId}
+            />
+            <ObjectivePanel
+              objectiveId={selectedObjectiveId}
+              onClose={() => setSelectedObjectiveId(null)}
+              readOnly={isReadOnly}
+            />
+          </>
         )}
       </div>
 

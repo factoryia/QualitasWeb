@@ -43,7 +43,7 @@ export function StrategyCreateObjectiveForm({ strategyId, onDone }: StrategyCrea
         startDate: today,
         endDate: nextYear,
         responsibleId: null,
-        strategyId,
+        analysisId: null,
       });
       // Step 2: link to strategy — awaits Step 1 to avoid race condition
       if (newObj?.id) {
