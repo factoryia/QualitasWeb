@@ -48,7 +48,7 @@ export function TabObjectiveGoals({ objectiveId, readOnly }: Props) {
   if (isLoading) return <Skeleton className="h-24 w-full" />;
 
   return (
-    <div className="space-y-3">
+    <div className="space-y-4">
       {filtered.length === 0 ? (
         <EmptyBlock
           icon={Target}

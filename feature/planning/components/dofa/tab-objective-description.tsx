@@ -101,8 +101,8 @@ export function TabObjectiveDescription({ objective, readOnly = false, onClose }
   };
 
   return (
-    <div className="space-y-5">
-      <div className="grid grid-cols-2 gap-4">
+    <div className="space-y-6">
+      <div className="grid grid-cols-2 gap-6">
         {/* Left column: editable fields */}
         <div className="space-y-4">
           {/* Name */}
@@ -162,21 +162,21 @@ export function TabObjectiveDescription({ objective, readOnly = false, onClose }
 
         {/* Right column: read-only date & status cards */}
         <div className="space-y-2">
-          <div className="rounded-lg border p-3 flex items-start gap-2">
+          <div className="rounded-lg border p-4 flex items-start gap-2">
             <CalendarDays className="h-4 w-4 text-muted-foreground mt-0.5 shrink-0" />
             <div>
               <p className="text-[11px] text-muted-foreground">Fecha inicio</p>
               <p className="text-sm font-medium">{fmtDate(objective.startDate)}</p>
             </div>
           </div>
-          <div className="rounded-lg border p-3 flex items-start gap-2">
+          <div className="rounded-lg border p-4 flex items-start gap-2">
             <CalendarDays className="h-4 w-4 text-muted-foreground mt-0.5 shrink-0" />
             <div>
               <p className="text-[11px] text-muted-foreground">Fecha fin</p>
               <p className="text-sm font-medium">{fmtDate(objective.endDate)}</p>
             </div>
           </div>
-          <div className="rounded-lg border p-3">
+          <div className="rounded-lg border p-4">
             <p className="text-[11px] text-muted-foreground">Estado</p>
             <p className="text-sm font-medium">{statusLabel}</p>
           </div>
@@ -184,7 +184,7 @@ export function TabObjectiveDescription({ objective, readOnly = false, onClose }
       </div>
 
       {/* Progress */}
-      <div className="space-y-2">
+      <div className="space-y-2 pt-2">
         <Label>Progreso</Label>
         <div className="text-3xl font-bold tabular-nums leading-none">
           {objective.progressPercentage ?? 0}%
@@ -201,7 +201,7 @@ export function TabObjectiveDescription({ objective, readOnly = false, onClose }
       </div>
 
       {/* Danger zone */}
-      <Separator />
+      <Separator className="mt-8" />
       <div className="space-y-2">
         <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
           Acciones peligrosas

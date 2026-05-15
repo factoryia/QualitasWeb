@@ -37,11 +37,11 @@ export function ObjectivePanel({ objectiveId, onClose, readOnly }: ObjectivePane
 
   return (
     <Sheet open={isOpen} onOpenChange={(o) => !o && onClose()}>
-      <SheetContent className="sm:max-w-3xl overflow-y-auto">
+      <SheetContent className="sm:max-w-3xl overflow-y-auto p-6 sm:p-8">
         {/* sr-only title keeps Radix aria-labelledby valid when the visual header is custom */}
-        <SheetTitle className="sr-only">{objective?.name ?? "Objetivo estratégico"}</SheetTitle>
-        <SheetHeader className="pb-0">
-          <div className="flex items-start gap-3 pb-4 border-b border-border">
+        <SheetTitle className="sr-only">{objective?.name ?? "Detalle del objetivo"}</SheetTitle>
+        <SheetHeader className="p-0">
+          <div className="flex items-start gap-3 pb-6 border-b border-border">
             <ProgressRing value={objective?.progressPercentage ?? 0} size={56} />
             <div className="flex-1 min-w-0">
               {isLoading ? (
@@ -79,7 +79,7 @@ export function ObjectivePanel({ objectiveId, onClose, readOnly }: ObjectivePane
         </SheetHeader>
 
         {objectiveId && (
-          <Tabs defaultValue="description" className="mt-4">
+          <Tabs defaultValue="description" className="mt-6">
             <TabsList className="grid w-full grid-cols-4">
               <TabsTrigger value="description">Descripción</TabsTrigger>
               <TabsTrigger value="goals">Metas</TabsTrigger>
