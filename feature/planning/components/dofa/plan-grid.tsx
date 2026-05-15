@@ -2,6 +2,7 @@
 
 import { useMemo, useState } from "react";
 import { Plus, Target } from "lucide-react";
+import { EmptyBlock } from "./empty-block";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
@@ -88,27 +89,25 @@ export function PlanGrid({ analysisId, readOnly, onSelectObjective }: PlanGridPr
 
       {/* Empty state */}
       {objectives.length === 0 ? (
-        <div className="flex flex-col items-center justify-center py-12 text-center">
-          <div className="h-12 w-12 rounded-full bg-muted flex items-center justify-center text-muted-foreground mb-3">
-            <Target className="h-6 w-6" />
-          </div>
-          <p className="text-sm font-medium">No hay objetivos definidos</p>
-          <p className="text-xs text-muted-foreground max-w-md mt-1">
-            Crea el primer objetivo estratégico para este análisis. Puedes vincularlos a
-            estrategias FO/DO/FA/DA en Fase 2.
-          </p>
-          {!readOnly && (
-            <Button
-              size="sm"
-              variant="outline"
-              className="mt-4 gap-1.5"
-              onClick={() => setCreateOpen(true)}
-            >
-              <Plus className="h-3.5 w-3.5" />
-              Crear primer objetivo
-            </Button>
-          )}
-        </div>
+        <EmptyBlock
+          icon={Target}
+          title="No hay objetivos definidos"
+          description="Crea el primer objetivo estratégico para este análisis. Puedes vincularlos a estrategias FO/DO/FA/DA en Fase 2."
+          className="py-12"
+          cta={
+            !readOnly ? (
+              <Button
+                size="sm"
+                variant="outline"
+                className="gap-1.5"
+                onClick={() => setCreateOpen(true)}
+              >
+                <Plus className="h-3.5 w-3.5" />
+                Crear primer objetivo
+              </Button>
+            ) : undefined
+          }
+        />
       ) : (
         <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-3">
           {objectives.map((obj) => (

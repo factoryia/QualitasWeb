@@ -1,12 +1,13 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { Plus } from "lucide-react";
+import { BarChart2, Plus, TrendingUp } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useGoalsQuery, useIndicatorsQuery } from "@/feature/planning/hooks/use-dofa";
 import { IndicatorAccordion } from "./indicator-accordion";
 import { IndicatorFormDialog } from "./indicator-form-dialog";
+import { EmptyBlock } from "./empty-block";
 import type { IndicatorDto } from "@/feature/planning/api/dofa";
 
 interface Props {
@@ -27,9 +28,11 @@ export function TabObjectiveIndicators({ objectiveId, readOnly }: Props) {
 
   if (filteredGoals.length === 0) {
     return (
-      <p className="text-sm text-muted-foreground text-center py-8">
-        Crea primero metas en la tab Metas para poder agregar indicadores.
-      </p>
+      <EmptyBlock
+        icon={BarChart2}
+        title="Sin metas creadas"
+        description="Crea primero metas en la tab Metas para poder agregar indicadores."
+      />
     );
   }
 
@@ -67,7 +70,12 @@ function GoalIndicatorsBlock({ goalId, goalDescription, readOnly }: BlockProps) 
       </h4>
       <div className="space-y-2">
         {indicators.length === 0 ? (
-          <p className="text-xs text-muted-foreground italic px-3">Sin indicadores</p>
+          <EmptyBlock
+            icon={TrendingUp}
+            title="Sin indicadores"
+            description="Agrega un indicador para medir el avance de esta meta."
+            className="py-4"
+          />
         ) : (
           indicators.map((ind) => (
             <IndicatorAccordion

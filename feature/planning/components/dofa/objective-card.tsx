@@ -1,5 +1,6 @@
 "use client";
 
+import { format } from "date-fns";
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
 import { ProgressRing } from "./progress-ring";
@@ -28,11 +29,11 @@ export function ObjectiveCard({
 
   return (
     <Card
-      className="cursor-pointer hover:shadow-md transition-shadow p-4"
+      className="cursor-pointer hover:shadow-md hover:border-sky-200 transition-all active:scale-[0.99] p-4"
       onClick={onClick}
     >
       <div className="flex items-start gap-3">
-        <ProgressRing value={objective.progressPercentage} size={44} />
+        <ProgressRing value={objective.progressPercentage} size={48} />
         <div className="flex-1 min-w-0">
           <h3 className="text-sm font-semibold leading-snug truncate">{objective.name}</h3>
           {objective.description && (
@@ -40,7 +41,7 @@ export function ObjectiveCard({
               {objective.description}
             </p>
           )}
-          <div className="flex items-center gap-2 mt-2 text-xs text-muted-foreground">
+          <div className="flex flex-wrap items-center gap-2 mt-2 text-xs text-muted-foreground">
             <span>
               {goalsCount} {goalsCount === 1 ? "meta" : "metas"}
             </span>
@@ -49,6 +50,11 @@ export function ObjectiveCard({
               <span className={`inline-block w-1.5 h-1.5 rounded-full ${cfg.dotClass}`} />
               {cfg.label}
             </Badge>
+            {objective.endDate && (
+              <Badge variant="outline" className="h-5 px-1.5 text-[10px] text-muted-foreground">
+                Vence {format(new Date(objective.endDate), "dd/MM/yyyy")}
+              </Badge>
+            )}
           </div>
           {origins.length > 0 && (
             <div className="flex flex-wrap items-center gap-1 mt-2">

@@ -73,8 +73,8 @@ export function CreateObjectiveDialog({
       name: name.trim(),
       description: description.trim() || null,
       statusId: resolvedStatusId,
-      startDate,
-      endDate,
+      startDate: new Date(startDate + "T12:00:00").toISOString(),
+      endDate: new Date(endDate + "T12:00:00").toISOString(),
       responsibleId: null,
       analysisId,
     });

@@ -110,7 +110,7 @@ function GoalFormInner({ goal, objectiveId, statuses, onClose }: GoalFormInnerPr
       baselineValue: parseFloat(form.baselineValue) || 0,
       unit: form.unit || null,
       weight: parseInt(form.weight) || GOAL_DEFAULTS.weight,
-      deadline: new Date(form.deadline + "T00:00:00Z").toISOString(),
+      deadline: new Date(form.deadline + "T12:00:00").toISOString(),
       statusId: form.statusId,
       responsibleId: null,
     };

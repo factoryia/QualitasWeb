@@ -66,7 +66,7 @@ export function MeasurementFormDialog({
 
     const payload = {
       value: parseFloat(form.value),
-      measurementDate: new Date(form.measurementDate + "T00:00:00Z").toISOString(),
+      measurementDate: new Date(form.measurementDate + "T12:00:00").toISOString(),
       goalIndicatorId: indicatorId,
       observations: form.observations || null,
       evidenceUrl: form.evidenceUrl || null,

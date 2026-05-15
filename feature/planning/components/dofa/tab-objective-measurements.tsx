@@ -1,8 +1,9 @@
 "use client";
 
 import { useMemo } from "react";
+import { Activity, Link as LinkIcon } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Link as LinkIcon } from "lucide-react";
+import { EmptyBlock } from "./empty-block";
 import {
   Table,
   TableBody,
@@ -34,9 +35,11 @@ export function TabObjectiveMeasurements({ objectiveId }: Props) {
 
   if (filteredGoals.length === 0) {
     return (
-      <p className="text-sm text-muted-foreground text-center py-8">
-        Sin metas ni mediciones registradas.
-      </p>
+      <EmptyBlock
+        icon={Activity}
+        title="Sin mediciones registradas"
+        description="Las mediciones aparecerán aquí una vez que tengas metas e indicadores configurados."
+      />
     );
   }
 

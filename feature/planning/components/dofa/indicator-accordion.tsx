@@ -25,7 +25,7 @@ import {
   useIndicatorTypesQuery,
 } from "@/feature/planning/hooks/use-dofa";
 import { Sparkline } from "./sparkline";
-import { lookupCatalogName, lookupTrendSymbol } from "./plan-helpers";
+import { lookupCatalogName } from "./plan-helpers";
 import { MeasurementFormDialog } from "./measurement-form-dialog";
 import type { IndicatorDto, MeasurementDto } from "@/feature/planning/api/dofa";
 
@@ -52,7 +52,15 @@ export function IndicatorAccordion({ indicator, goalId, onEdit, readOnly }: Prop
 
   const freqName = lookupCatalogName(indicator.frequencyId, frequencies);
   const typeName = lookupCatalogName(indicator.indicatorTypeId, indicatorTypes);
-  const trendSymbol = lookupTrendSymbol(indicator.trendId, trends);
+  const trend = trends.find((t) => t.id === indicator.trendId);
+  const trendSymbol = trend?.symbol ?? null;
+  const trendColorClass = trend
+    ? trend.code === "Increasing"
+      ? "text-emerald-500"
+      : trend.code === "Decreasing"
+      ? "text-rose-500"
+      : "text-slate-500"
+    : "text-muted-foreground";
 
   const deleteIndMutation = useDeleteIndicatorMutation();
   const deleteMeasMutation = useDeleteMeasurementMutation();
@@ -106,14 +114,14 @@ export function IndicatorAccordion({ indicator, goalId, onEdit, readOnly }: Prop
         <div className="flex-1 min-w-0">
           <div className="text-sm font-semibold leading-snug">{indicator.name}</div>
           <div className="flex flex-wrap items-center gap-1.5 mt-1.5">
-            <Badge variant="outline" className="h-5 px-1.5 text-[10px]">
+            <Badge className="h-5 px-1.5 text-[10px] bg-sky-100 text-sky-700 border-0">
               {freqName}
             </Badge>
-            <Badge variant="outline" className="h-5 px-1.5 text-[10px]">
+            <Badge className="h-5 px-1.5 text-[10px] bg-muted text-muted-foreground border-0">
               {typeName}
             </Badge>
             {trendSymbol && (
-              <span className="text-xs text-muted-foreground">{trendSymbol}</span>
+              <span className={`text-xs font-medium ${trendColorClass}`}>{trendSymbol}</span>
             )}
             {indicator.dataSource && (
               <span className="text-[10px] text-muted-foreground">
@@ -128,8 +136,8 @@ export function IndicatorAccordion({ indicator, goalId, onEdit, readOnly }: Prop
             className="flex items-center gap-2"
             onClick={(e) => e.stopPropagation()}
           >
-            <Sparkline values={sparklineValues} />
-            <span className="text-xs font-mono text-sky-500 font-semibold">
+            <Sparkline values={sparklineValues} width={100} height={28} />
+            <span className="text-sm font-mono font-semibold text-sky-500">
               {lastValue}
             </span>
           </div>

@@ -1,5 +1,7 @@
 "use client";
 
+import { format } from "date-fns";
+import { CalendarDays, User } from "lucide-react";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
@@ -29,25 +31,45 @@ export function ObjectivePanel({ objectiveId, onClose, readOnly }: ObjectivePane
       : "Planned";
   const cfg = OBJECTIVE_STATUS_CFG[code] ?? OBJECTIVE_STATUS_CFG.Planned;
 
+  const fmtDate = (iso: string) => {
+    try { return format(new Date(iso), "dd/MM/yyyy"); } catch { return iso; }
+  };
+
   return (
     <Sheet open={isOpen} onOpenChange={(o) => !o && onClose()}>
       <SheetContent className="sm:max-w-3xl overflow-y-auto">
-        <SheetHeader className="space-y-2">
-          <div className="flex items-center gap-3">
-            <ProgressRing value={objective?.progressPercentage ?? 0} size={36} />
+        <SheetHeader className="pb-0">
+          <div className="flex items-start gap-3 pb-4 border-b border-border">
+            <ProgressRing value={objective?.progressPercentage ?? 0} size={56} />
             <div className="flex-1 min-w-0">
               {isLoading ? (
                 <Skeleton className="h-5 w-48" />
               ) : (
-                <SheetTitle className="truncate">{objective?.name ?? "..."}</SheetTitle>
+                <SheetTitle className="text-base leading-snug">
+                  {objective?.name ?? "..."}
+                </SheetTitle>
               )}
               {objective?.description && (
-                <p className="text-xs text-muted-foreground line-clamp-2 mt-1">
+                <p className="text-xs text-muted-foreground line-clamp-1 mt-0.5">
                   {objective.description}
                 </p>
               )}
+              {objective && (
+                <div className="flex flex-wrap items-center gap-3 mt-1.5">
+                  <span className="inline-flex items-center gap-1 text-[11px] text-muted-foreground">
+                    <CalendarDays className="h-3 w-3" />
+                    {fmtDate(objective.startDate)} – {fmtDate(objective.endDate)}
+                  </span>
+                  {objective.responsibleId && (
+                    <span className="inline-flex items-center gap-1 text-[11px] text-muted-foreground">
+                      <User className="h-3 w-3" />
+                      Responsable asignado
+                    </span>
+                  )}
+                </div>
+              )}
             </div>
-            <Badge variant="outline" className="gap-1.5 shrink-0">
+            <Badge variant="outline" className="gap-1.5 shrink-0 mt-1">
               <span className={`inline-block w-1.5 h-1.5 rounded-full ${cfg.dotClass}`} />
               {cfg.label}
             </Badge>
@@ -69,6 +91,7 @@ export function ObjectivePanel({ objectiveId, onClose, readOnly }: ObjectivePane
                   key={objective.id}
                   objective={objective}
                   readOnly={readOnly}
+                  onClose={onClose}
                 />
               ) : (
                 <div className="space-y-3">
